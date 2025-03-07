@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useMediaQuery } from "@/hooks/use-mobile";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -28,6 +29,8 @@ interface SidebarItemProps {
 }
 
 function SidebarItem({ icon: Icon, label, to, collapsed }: SidebarItemProps) {
+  const { isDarkMode } = useTheme();
+  
   return (
     <NavLink
       to={to}
@@ -40,7 +43,13 @@ function SidebarItem({ icon: Icon, label, to, collapsed }: SidebarItemProps) {
         )
       }
     >
-      <Icon className="h-5 w-5" />
+      <Icon 
+        className={cn(
+          "h-5 w-5",
+          collapsed && !isDarkMode && "text-foreground",
+          collapsed && isDarkMode && "text-foreground"
+        )} 
+      />
       {!collapsed && <span>{label}</span>}
     </NavLink>
   );

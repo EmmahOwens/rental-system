@@ -11,6 +11,8 @@ export default function VerifyEmail() {
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const { verifyEmail, sendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,6 +25,17 @@ export default function VerifyEmail() {
       navigate("/signup");
     }
   }, [email, navigate]);
+
+  useEffect(() => {
+    // Countdown timer for OTP resend
+    let timer: number;
+    if (countdown > 0) {
+      timer = window.setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else {
+      setResendDisabled(false);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +65,9 @@ export default function VerifyEmail() {
   };
 
   const handleResendOtp = async () => {
+    setResendDisabled(true);
+    setCountdown(60); // 60 seconds cooldown
+    
     try {
       const newOtp = await sendVerificationEmail(email);
       toast({
@@ -66,6 +82,8 @@ export default function VerifyEmail() {
         description: error.message || "An error occurred",
         variant: "destructive",
       });
+      setResendDisabled(false);
+      setCountdown(0);
     }
   };
 
@@ -154,12 +172,19 @@ export default function VerifyEmail() {
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Didn't receive the code?{" "}
-              <button
-                onClick={handleResendOtp}
-                className="text-primary font-medium hover:underline"
-              >
-                Resend
-              </button>
+              {resendDisabled ? (
+                <span className="text-muted-foreground">
+                  Resend in {countdown}s
+                </span>
+              ) : (
+                <button
+                  onClick={handleResendOtp}
+                  className="text-primary font-medium hover:underline"
+                  disabled={resendDisabled}
+                >
+                  Resend
+                </button>
+              )}
             </p>
           </div>
         </NeumorphicCard>

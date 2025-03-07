@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
 // Types for our user roles
 export type UserRole = 'tenant' | 'landlord';
@@ -13,26 +14,6 @@ export interface User {
   verified: boolean;
 }
 
-// Mock users for demonstration
-const MOCK_USERS = {
-  'admin@rental.com': {
-    id: 'admin-1',
-    email: 'admin@rental.com',
-    name: 'Admin User',
-    password: 'admin123',
-    role: 'landlord' as UserRole,
-    verified: true
-  },
-  'tenant@example.com': {
-    id: 'tenant-1',
-    email: 'tenant@example.com',
-    name: 'Test Tenant',
-    password: 'tenant123',
-    role: 'tenant' as UserRole,
-    verified: true
-  }
-};
-
 // OTP generation function
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -43,9 +24,10 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   sendVerificationEmail: (email: string) => Promise<string>;
   verifyEmail: (otp: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,48 +39,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentOTP, setCurrentOTP] = useState<string>("");
 
   useEffect(() => {
-    // Check for logged in user in localStorage
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    // Check for logged in user in Supabase
+    const checkUser = async () => {
+      setIsLoading(true);
+      
+      // Get session from Supabase
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session) {
+        // Get user metadata for role
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const userData: User = {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata.name || '',
+            role: user.user_metadata.role || 'tenant',
+            verified: user.email_confirmed_at ? true : false
+          };
+          
+          setCurrentUser(userData);
+        }
+      }
+      
+      setIsLoading(false);
+    };
+    
+    checkUser();
+    
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const userData: User = {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata.name || '',
+            role: user.user_metadata.role || 'tenant',
+            verified: user.email_confirmed_at ? true : false
+          };
+          
+          setCurrentUser(userData);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  // Mock login function
+  // Login function using Supabase
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
-    // Simulate API request
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
     
-    const mockUser = (MOCK_USERS as any)[email];
-    
-    if (!mockUser || mockUser.password !== password) {
+    if (error) {
       setIsLoading(false);
-      throw new Error('Invalid email or password');
+      throw new Error(error.message);
     }
     
-    // Create user object without the password
-    const { password: _, ...userWithoutPassword } = mockUser;
-    setCurrentUser(userWithoutPassword);
-    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+    // User data is handled by the auth state listener
     setIsLoading(false);
   };
 
-  // Mock signup function (can now handle tenant and landlord signups)
+  // Signup function using Supabase
   const signup = async (email: string, name: string, password: string, role: UserRole, adminCode?: string) => {
     setIsLoading(true);
     
-    // Simulate API request
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if user already exists
-    if ((MOCK_USERS as any)[email]) {
-      setIsLoading(false);
-      throw new Error('User already exists');
-    }
-
     // If role is landlord, check admin code
     if (role === 'landlord') {
       if (adminCode !== 'Admin256') {
@@ -106,71 +123,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid admin registration code');
       }
     }
-
-    // Create new user (not stored in MOCK_USERS since this is just a mock implementation)
-    const newUser = {
-      id: `${role}-${Date.now()}`,
+    
+    // Create user in Supabase
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role,
+        }
+      }
+    });
+    
+    if (error) {
+      setIsLoading(false);
+      throw new Error(error.message);
+    }
+    
+    // Store temporary data for verification
+    const userForVerification = {
       email,
       name,
-      role,
-      verified: false
+      role
     };
-
-    // Store user for verification
-    setPendingVerificationUser({ ...newUser, password });
+    setPendingVerificationUser(userForVerification);
     
     setIsLoading(false);
-    return;
   };
 
-  // Mock send verification email with OTP
+  // Send verification email with OTP
   const sendVerificationEmail = async (email: string) => {
     // Generate an OTP
     const otp = generateOTP();
     setCurrentOTP(otp);
     
-    // In a real implementation, this would send an email with OTP
-    console.log(`Verification email sent to ${email}. OTP: ${otp}`);
+    // Here we would normally send an email with OTP
+    // For now, we'll just log it and return it for demo purposes
+    console.log(`Verification OTP for ${email}: ${otp}`);
     
-    // For demo purposes, we'll return the OTP so we can display it
+    // In a production app, we would send an email here using Supabase Edge Functions
+    // await supabase.functions.invoke('send-verification-email', { body: { email, otp } });
+    
     return otp;
   };
 
-  // Mock verify email with OTP
+  // Verify email with OTP
   const verifyEmail = async (otp: string) => {
     setIsLoading(true);
-    
-    // Simulate API request
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Check OTP
     if (otp !== currentOTP) {
       setIsLoading(false);
       throw new Error('Invalid OTP');
     }
-
-    // Update the user to be verified
+    
+    // In a production environment, we would update verification status in Supabase
+    // For now, we'll just simulate it
     if (pendingVerificationUser) {
       const verifiedUser = {
         ...pendingVerificationUser,
         verified: true
       };
       
-      // Remove password before setting in state
-      const { password: _, ...userWithoutPassword } = verifiedUser;
+      // In a real implementation we'd update Supabase metadata here
       
-      setCurrentUser(userWithoutPassword);
-      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
       setPendingVerificationUser(null);
       setCurrentOTP("");
     }
     
     setIsLoading(false);
   };
+  
+  // Reset password function
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
 
-  const logout = () => {
+  // Logout function using Supabase
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
   };
 
   const value = {
@@ -180,7 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signup,
     logout,
     sendVerificationEmail,
-    verifyEmail
+    verifyEmail,
+    resetPassword
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
