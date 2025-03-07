@@ -2,7 +2,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
-import { Home, Users, MessageSquare, CreditCard, Bell, Calendar, Pie } from "lucide-react";
+import { Home, Users, MessageSquare, CreditCard, Bell, Calendar, PieChart } from "lucide-react";
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
@@ -20,7 +20,7 @@ export default function Dashboard() {
     { icon: Home, label: "Total Properties", value: "12" },
     { icon: Users, label: "Active Tenants", value: "28" },
     { icon: CreditCard, label: "Monthly Revenue", value: "$32,400" },
-    { icon: Pie, label: "Occupancy Rate", value: "92%" },
+    { icon: PieChart, label: "Occupancy Rate", value: "92%" },
     { icon: Bell, label: "Pending Actions", value: "5" },
   ];
 
