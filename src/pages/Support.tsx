@@ -3,7 +3,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, Send, MessageSquare, FileText, Home, Tool, Clock } from "lucide-react";
+import { HelpCircle, Send, MessageSquare, FileText, Home, Wrench, Clock } from "lucide-react";
 
 export default function Support() {
   const [message, setMessage] = useState("");
@@ -46,7 +46,7 @@ export default function Support() {
   // Support categories
   const categories = [
     { id: "general", label: "General Inquiry", icon: HelpCircle },
-    { id: "maintenance", label: "Maintenance Issue", icon: Tool },
+    { id: "maintenance", label: "Maintenance Issue", icon: Wrench },
     { id: "payments", label: "Payment Question", icon: FileText },
     { id: "property", label: "Property Concern", icon: Home },
     { id: "other", label: "Other", icon: MessageSquare },
