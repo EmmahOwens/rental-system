@@ -199,11 +199,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // In a real implementation we'd update Supabase metadata here
       
+      const userRole = pendingVerificationUser.role;
       setPendingVerificationUser(null);
       setCurrentOTP("");
+      
+      setIsLoading(false);
+      return userRole; // Return the user role for redirection
     }
     
     setIsLoading(false);
+    return 'tenant'; // Default role if no pending user (fallback)
   };
   
   // Reset password function

@@ -13,7 +13,7 @@ export default function VerifyEmail() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const { verifyEmail, sendVerificationEmail } = useAuth();
+  const { verifyEmail, sendVerificationEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -40,18 +40,34 @@ export default function VerifyEmail() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
+  
     try {
-      await verifyEmail(otp);
+      const userRole = await verifyEmail(otp);
       setIsSuccess(true);
       toast({
         title: "Email verified",
         description: "Your email has been verified successfully!",
       });
       
-      // Redirect to dashboard after a short delay
+      // Determine the appropriate dashboard based on user role
+      let dashboardUrl = '/dashboard';
+      if (typeof userRole === 'string') {
+        switch (userRole) {
+          case 'admin':
+            dashboardUrl = '/admin/dashboard';
+            break;
+          case 'landlord':
+            dashboardUrl = '/landlord/dashboard';
+            break;
+          case 'tenant':
+            dashboardUrl = '/tenant/dashboard';
+            break;
+        }
+      }
+      
+      // Redirect to the appropriate dashboard after a short delay
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate(dashboardUrl);
       }, 2000);
     } catch (error: any) {
       toast({

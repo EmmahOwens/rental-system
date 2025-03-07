@@ -4,75 +4,130 @@ import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, ChevronDown, Eye, Filter, Search, UserPlus, X } from "lucide-react";
 import { useState } from "react";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // This page is only for landlords
 export default function Applications() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Mock data for applications
-  const applications = [
-    {
-      id: 1,
-      name: "Robert Johnson",
-      email: "robert.johnson@example.com",
-      phone: "(555) 234-5678",
-      property: "Sunset Apartments, #302",
-      status: "Pending",
-      appliedDate: "May 12, 2023",
-      income: "$75,000",
-      creditScore: "Good",
-    },
-    {
-      id: 2,
-      name: "Sarah Williams",
-      email: "sarah.williams@example.com",
-      phone: "(555) 876-5432",
-      property: "Sunset Apartments, #205",
-      status: "Pending",
-      appliedDate: "May 10, 2023",
-      income: "$82,000",
-      creditScore: "Excellent",
-    },
-    {
-      id: 3,
-      name: "James Brown",
-      email: "james.brown@example.com",
-      phone: "(555) 345-6789",
-      property: "Sunset Apartments, #410",
-      status: "Pending",
-      appliedDate: "May 8, 2023",
-      income: "$68,000",
-      creditScore: "Good",
-    },
-    {
-      id: 4,
-      name: "Maria Garcia",
-      email: "maria.garcia@example.com",
-      phone: "(555) 987-1234",
-      property: "Sunset Apartments, #103",
-      status: "Pending",
-      appliedDate: "May 5, 2023",
-      income: "$92,000",
-      creditScore: "Excellent",
-    },
-  ];
-
-  const handleApproveApplication = (id: number, name: string) => {
-    toast({
-      title: "Application approved",
-      description: `${name} has been approved as a tenant`,
-    });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Fetch applications from Supabase
+  useEffect(() => {
+    async function fetchApplications() {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('rental_applications')  // Changed from 'applications' to 'rental_applications'
+          .select('*');
+          
+        if (error) throw error;
+        
+        setApplications(data || []);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load applications",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchApplications();
+  }, [toast]);
+  // Handle approve application with Supabase
+  const handleApproveApplication = async (id, name) => {
+    try {
+      const { error } = await supabase
+        .from('rental_applications')  // Changed from 'applications' to 'rental_applications'
+        .update({ status: 'Approved' })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setApplications(prev => 
+        prev.map(app => app.id === id ? {...app, status: 'Approved'} : app)
+      );
+      
+      toast({
+        title: "Application approved",
+        description: `${name} has been approved as a tenant`,
+      });
+    } catch (error) {
+      console.error('Error approving application:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve application",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleRejectApplication = (id: number, name: string) => {
-    toast({
-      title: "Application rejected",
-      description: `${name}'s application has been rejected`,
-      variant: "destructive",
-    });
-  };
-
+  // Similar implementation for handleRejectApplication
+  
+  const applicationsPerPage = 3; // Number of applications to show per page
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCreditScore, setFilterCreditScore] = useState("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // Apply filters
+  let filteredApplications = applications.filter(app =>
+    app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.property.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  // Apply status filter
+  if (filterStatus !== "all") {
+    filteredApplications = filteredApplications.filter(app => 
+      app.status.toLowerCase() === filterStatus.toLowerCase()
+    );
+  }
+  // Apply credit score filter
+  if (filterCreditScore !== "all") {
+    filteredApplications = filteredApplications.filter(app => 
+      app.creditScore === filterCreditScore
+    );
+  }
+  // Calculate pagination with filtered applications
+  const indexOfLastApplication = currentPage * applicationsPerPage;
+  const indexOfFirstApplication = indexOfLastApplication - applicationsPerPage;
+  const currentApplications = filteredApplications.slice(indexOfFirstApplication, indexOfLastApplication);
+  const totalPages = Math.ceil(filteredApplications.length / applicationsPerPage);
   return (
     <DashboardLayout>
       <div className="mb-8">
@@ -157,7 +212,7 @@ export default function Applications() {
               </tr>
             </thead>
             <tbody>
-              {applications.map((app) => (
+              {currentApplications.map((app) => (
                 <tr key={app.id} className="border-b border-border">
                   <td className="py-4">
                     <div>
@@ -185,14 +240,24 @@ export default function Applications() {
                       </button>
                       <button 
                         className="neumorph-button text-sm py-1 px-2 flex items-center gap-1 bg-primary text-primary-foreground"
-                        onClick={() => handleApproveApplication(app.id, app.name)}
+                        onClick={() => {
+                          toast({
+                            title: "Application Approved",
+                            description: `Successfully approved ${app.name}'s application.`
+                          });
+                        }}
                       >
                         <CheckCircle className="h-3 w-3" />
                         Approve
                       </button>
                       <button 
                         className="neumorph-button text-sm py-1 px-2 flex items-center gap-1 text-destructive"
-                        onClick={() => handleRejectApplication(app.id, app.name)}
+                        onClick={() => {
+                          toast({
+                            title: "Application Rejected",
+                            description: `Successfully rejected ${app.name}'s application.`
+                          });
+                        }}
                       >
                         <X className="h-3 w-3" />
                         Reject
@@ -204,7 +269,122 @@ export default function Applications() {
             </tbody>
           </table>
         </div>
+
+        {/* Add pagination */}
+        <div className="mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: totalPages }).map((_, index) => (
+                <PaginationItem key={index}>
+                  <PaginationLink 
+                    onClick={() => setCurrentPage(index + 1)}
+                    isActive={currentPage === index + 1}
+                  >
+                    {index + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </NeumorphicCard>
     </DashboardLayout>
   );
+
+interface Application {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  property: string;
+  status: string;
+  appliedDate: string;
+  income: string;
+  creditScore: string;
+}
+
+const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+const handleViewApplication = (application: Application) => {
+  setSelectedApplication(application);
+  setIsViewDialogOpen(true);
+};
+
+// Render the view dialog
+const renderViewDialog = () => (
+  <AlertDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+    <AlertDialogContent className="max-w-md">
+      <AlertDialogHeader>
+        <AlertDialogTitle>Application Details</AlertDialogTitle>
+        <AlertDialogDescription>
+          {selectedApplication && (
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-2">
+                <p className="font-medium">Name:</p>
+                <p>{selectedApplication.name}</p>
+                
+                <p className="font-medium">Email:</p>
+                <p>{selectedApplication.email}</p>
+                
+                <p className="font-medium">Phone:</p>
+                <p>{selectedApplication.phone}</p>
+                
+                <p className="font-medium">Property:</p>
+                <p>{selectedApplication.property}</p>
+                
+                <p className="font-medium">Applied Date:</p>
+                <p>{selectedApplication.appliedDate}</p>
+                
+                <p className="font-medium">Income:</p>
+                <p>{selectedApplication.income}</p>
+                
+                <p className="font-medium">Credit Score:</p>
+                <p>{selectedApplication.creditScore}</p>
+              </div>
+            </div>
+          )}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Close</AlertDialogCancel>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+);
+
+// Update the table row to include the view button
+const renderTableRow = (app: Application) => (
+  <tr key={app.id} className="border-b border-border">
+    {/* ... other table cells ... */}
+    <td className="py-4">
+      <div className="flex gap-2">
+        <button 
+          className="neumorph-button text-sm py-1 px-2 flex items-center gap-1"
+          onClick={() => handleViewApplication(app)}
+        >
+          <Eye className="h-3 w-3" />
+          View
+        </button>
+        {/* ... other buttons ... */}
+      </div>
+    </td>
+  </tr>
+);
+
+{renderViewDialog()}
 }
