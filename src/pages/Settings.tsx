@@ -1,228 +1,248 @@
 
-import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
-import { Moon, Sun, User, Key, Globe, Bell, Phone, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Moon, Save, Sun, User, Shield, DollarSign, BellRing, Mail, Phone } from "lucide-react";
 
 export default function Settings() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, updateUserProfile } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { toast } = useToast();
-  const [name, setName] = useState(currentUser?.name || "");
-  const [phone, setPhone] = useState("");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [language, setLanguage] = useState("en");
-  const [currency, setCurrency] = useState("UGX");
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  const handleSaveProfile = (e: React.FormEvent) => {
+  // Form states
+  const [firstName, setFirstName] = useState(currentUser?.firstName || "");
+  const [lastName, setLastName] = useState(currentUser?.lastName || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
+  const [phone, setPhone] = useState(currentUser?.phone || "");
+  
+  // Notification preferences
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(true);
+  const [paymentReminders, setPaymentReminders] = useState(true);
+  const [maintenanceUpdates, setMaintenanceUpdates] = useState(true);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
+    setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
-      toast({
-        title: "Profile Updated",
-        description: "Your profile information has been saved.",
-      });
-    }, 1000);
-  };
-  
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Password Reset Email Sent",
-      description: "Check your email for instructions to reset your password.",
-    });
-  };
-  
-  const handleLogout = async () => {
     try {
-      await logout();
+      await updateUserProfile({
+        firstName,
+        lastName,
+        phone
+      });
+      
       toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out.",
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to log out. Please try again.",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSaveNotifications = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    toast({
+      title: "Preferences saved",
+      description: "Your notification preferences have been updated",
+    });
   };
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto max-w-4xl py-8 px-4">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
-        
-        <div className="space-y-6">
-          {/* Profile Settings */}
-          <NeumorphicCard className="p-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6">
-              <User className="h-5 w-5 text-primary" />
-              <span>Profile Information</span>
-            </h2>
-            
-            <form onSubmit={handleSaveProfile}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium mb-1">Full Name</label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="neumorph-input w-full"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={currentUser?.email}
-                    disabled
-                    className="neumorph-input w-full opacity-70"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
-                </div>
-                
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium mb-1">Phone Number</label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="neumorph-input w-full"
-                    placeholder="+256 XXX XXX XXX"
-                  />
-                </div>
-                
-                <button
-                  type="submit"
-                  className="neumorph-button mt-4"
-                  disabled={isSaving}
-                >
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </NeumorphicCard>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <p className="text-muted-foreground">Manage your account settings and preferences</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <NeumorphicCard className="p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
+            Profile Settings
+          </h2>
           
-          {/* Account Settings */}
-          <NeumorphicCard className="p-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6">
-              <Key className="h-5 w-5 text-primary" />
-              <span>Account Settings</span>
-            </h2>
-            
-            <div className="space-y-4">
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium mb-2">Account Type</p>
-                <div className="neumorph-inset px-4 py-2 rounded-lg">
-                  <span className="capitalize">{currentUser?.role || "Tenant"}</span>
-                </div>
+                <label htmlFor="firstName" className="block text-sm font-medium mb-1">First Name</label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="neumorph-input w-full"
+                />
               </div>
               
               <div>
-                <p className="text-sm font-medium mb-2">Change Password</p>
-                <button
-                  onClick={handleChangePassword}
-                  className="neumorph-button"
-                >
-                  Reset Password
-                </button>
-              </div>
-              
-              <div className="pt-4 border-t border-border">
-                <button
-                  onClick={handleLogout}
-                  className="neumorph-button bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Log Out</span>
-                </button>
+                <label htmlFor="lastName" className="block text-sm font-medium mb-1">Last Name</label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="neumorph-input w-full"
+                />
               </div>
             </div>
-          </NeumorphicCard>
-          
-          {/* Preferences */}
-          <NeumorphicCard className="p-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6">
-              <Globe className="h-5 w-5 text-primary" />
-              <span>Preferences</span>
-            </h2>
             
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Theme</p>
-                  <p className="text-sm text-muted-foreground">Toggle between light and dark mode</p>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                disabled
+                className="neumorph-input w-full bg-muted cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
+            </div>
+            
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium mb-1">Phone Number</label>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+256 70 123 4567"
+                className="neumorph-input w-full"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={loading}
+              className="neumorph-button bg-primary text-primary-foreground flex items-center gap-2 mt-2"
+            >
+              <Save className="h-4 w-4" />
+              Save Changes
+              {loading && <span className="ml-2 animate-spin">⟳</span>}
+            </button>
+          </form>
+        </NeumorphicCard>
+        
+        <NeumorphicCard className="p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <BellRing className="h-5 w-5 text-primary" />
+            Notification Preferences
+          </h2>
+          
+          <form onSubmit={handleSaveNotifications} className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 neumorph rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <label htmlFor="emailNotifications" className="text-sm font-medium">Email Notifications</label>
                 </div>
-                <button
-                  onClick={toggleTheme}
-                  className="neumorph p-3 rounded-full"
-                  aria-label="Toggle theme"
-                >
-                  {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                </button>
-              </div>
-              
-              <div>
-                <label htmlFor="language" className="block text-sm font-medium mb-1">Language</label>
-                <select
-                  id="language"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="neumorph-input w-full"
-                >
-                  <option value="en">English</option>
-                  <option value="sw">Swahili</option>
-                  <option value="lg">Luganda</option>
-                </select>
-              </div>
-              
-              <div>
-                <label htmlFor="currency" className="block text-sm font-medium mb-1">Currency</label>
-                <select
-                  id="currency"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="neumorph-input w-full"
-                >
-                  <option value="UGX">Ugandan Shilling (UGX)</option>
-                  <option value="USD">US Dollar (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
-                </select>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Email Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive updates and alerts via email</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={notificationsEnabled}
-                    onChange={() => setNotificationsEnabled(!notificationsEnabled)}
+                    id="emailNotifications"
+                    checked={emailNotifications}
+                    onChange={() => setEmailNotifications(!emailNotifications)}
                     className="sr-only peer"
                   />
-                  <div className="neumorph w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 neumorph rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <label htmlFor="smsNotifications" className="text-sm font-medium">SMS Notifications</label>
+                </div>
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="smsNotifications"
+                    checked={smsNotifications}
+                    onChange={() => setSmsNotifications(!smsNotifications)}
+                    className="sr-only peer"
+                  />
+                  <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 neumorph rounded-lg">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <label htmlFor="paymentReminders" className="text-sm font-medium">Payment Reminders</label>
+                </div>
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="paymentReminders"
+                    checked={paymentReminders}
+                    onChange={() => setPaymentReminders(!paymentReminders)}
+                    className="sr-only peer"
+                  />
+                  <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 neumorph rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <label htmlFor="maintenanceUpdates" className="text-sm font-medium">Maintenance Updates</label>
+                </div>
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="maintenanceUpdates"
+                    checked={maintenanceUpdates}
+                    onChange={() => setMaintenanceUpdates(!maintenanceUpdates)}
+                    className="sr-only peer"
+                  />
+                  <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
             </div>
-          </NeumorphicCard>
-        </div>
+            
+            <button
+              type="submit"
+              className="neumorph-button bg-primary text-primary-foreground flex items-center gap-2 mt-2"
+            >
+              <Save className="h-4 w-4" />
+              Save Preferences
+            </button>
+          </form>
+        </NeumorphicCard>
       </div>
+      
+      <NeumorphicCard className="p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          {isDarkMode ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
+          Appearance
+        </h2>
+        
+        <div className="flex items-center justify-between p-4 neumorph rounded-lg">
+          <div>
+            <h3 className="font-medium">Dark Mode</h3>
+            <p className="text-sm text-muted-foreground">Toggle between light and dark theme</p>
+          </div>
+          
+          <button
+            onClick={toggleTheme}
+            className="neumorph p-2 rounded-full h-10 w-10 flex items-center justify-center"
+          >
+            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+        </div>
+      </NeumorphicCard>
     </DashboardLayout>
   );
 }
