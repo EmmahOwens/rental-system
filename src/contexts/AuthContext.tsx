@@ -33,13 +33,18 @@ const MOCK_USERS = {
   }
 };
 
+// OTP generation function
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
 type AuthContextType = {
   currentUser: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, name: string, password: string) => Promise<void>;
+  signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<void>;
   logout: () => void;
-  sendVerificationEmail: (email: string) => Promise<void>;
+  sendVerificationEmail: (email: string) => Promise<string>;
   verifyEmail: (otp: string) => Promise<void>;
 };
 
@@ -49,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingVerificationUser, setPendingVerificationUser] = useState<any>(null);
+  const [currentOTP, setCurrentOTP] = useState<string>("");
 
   useEffect(() => {
     // Check for logged in user in localStorage
@@ -80,8 +86,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   };
 
-  // Mock signup function (only allows tenant signups)
-  const signup = async (email: string, name: string, password: string) => {
+  // Mock signup function (can now handle tenant and landlord signups)
+  const signup = async (email: string, name: string, password: string, role: UserRole, adminCode?: string) => {
     setIsLoading(true);
     
     // Simulate API request
@@ -93,12 +99,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('User already exists');
     }
 
+    // If role is landlord, check admin code
+    if (role === 'landlord') {
+      if (adminCode !== 'Admin256') {
+        setIsLoading(false);
+        throw new Error('Invalid admin registration code');
+      }
+    }
+
     // Create new user (not stored in MOCK_USERS since this is just a mock implementation)
     const newUser = {
-      id: `tenant-${Date.now()}`,
+      id: `${role}-${Date.now()}`,
       email,
       name,
-      role: 'tenant' as UserRole,
+      role,
       verified: false
     };
 
@@ -109,22 +123,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return;
   };
 
-  // Mock send verification email
+  // Mock send verification email with OTP
   const sendVerificationEmail = async (email: string) => {
+    // Generate an OTP
+    const otp = generateOTP();
+    setCurrentOTP(otp);
+    
     // In a real implementation, this would send an email with OTP
-    console.log(`Verification email sent to ${email}. OTP: 123456`);
-    return;
+    console.log(`Verification email sent to ${email}. OTP: ${otp}`);
+    
+    // For demo purposes, we'll return the OTP so we can display it
+    return otp;
   };
 
-  // Mock verify email
+  // Mock verify email with OTP
   const verifyEmail = async (otp: string) => {
     setIsLoading(true);
     
     // Simulate API request
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Check OTP (in a real app, this would be compared with a stored OTP)
-    if (otp !== '123456') {
+    // Check OTP
+    if (otp !== currentOTP) {
       setIsLoading(false);
       throw new Error('Invalid OTP');
     }
@@ -142,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser(userWithoutPassword);
       localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
       setPendingVerificationUser(null);
+      setCurrentOTP("");
     }
     
     setIsLoading(false);

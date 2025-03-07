@@ -5,6 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, CreditCard, DollarSign, FileText, Plus } from "lucide-react";
 
+// Format UGX currency
+const formatUGX = (amount: number) => {
+  return `UGX ${amount.toLocaleString("en-UG")}`;
+};
+
 export default function Payments() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -21,21 +26,21 @@ export default function Payments() {
     {
       id: "PAY-001",
       date: "May 1, 2023",
-      amount: "$1,200.00",
+      amount: 1200000,
       status: "Paid",
       property: "Sunset Apartments, #304",
     },
     {
       id: "PAY-002",
       date: "April 1, 2023",
-      amount: "$1,200.00",
+      amount: 1200000,
       status: "Paid",
       property: "Sunset Apartments, #304",
     },
     {
       id: "PAY-003",
       date: "March 1, 2023",
-      amount: "$1,200.00",
+      amount: 1200000,
       status: "Paid",
       property: "Sunset Apartments, #304",
     },
@@ -68,7 +73,7 @@ export default function Payments() {
               </div>
               <div className="text-center md:text-left">
                 <p className="text-sm text-muted-foreground">Amount</p>
-                <p className="text-xl font-bold">$1,200.00</p>
+                <p className="text-xl font-bold">{formatUGX(1200000)}</p>
               </div>
               <div className="text-center md:text-left">
                 <p className="text-sm text-muted-foreground">Property</p>
@@ -93,10 +98,18 @@ export default function Payments() {
               <div className="p-4 neumorph rounded-lg">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-muted-foreground">Expires 12/25</p>
+                    <p className="font-medium">Mobile Money (MTN)</p>
+                    <p className="text-sm text-muted-foreground">+256 70 123 4567</p>
                   </div>
                   <span className="text-sm font-medium">Default</span>
+                </div>
+              </div>
+              <div className="p-4 neumorph rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Mobile Money (Airtel)</p>
+                    <p className="text-sm text-muted-foreground">+256 75 987 6543</p>
+                  </div>
                 </div>
               </div>
               <button className="neumorph-button w-full flex items-center justify-center gap-2 mt-2">
@@ -139,7 +152,7 @@ export default function Payments() {
                 <tr key={payment.id} className="border-b border-border">
                   <td className="py-4">{payment.id}</td>
                   <td className="py-4">{payment.date}</td>
-                  <td className="py-4">{payment.amount}</td>
+                  <td className="py-4">{formatUGX(payment.amount)}</td>
                   <td className="py-4">
                     <span className="px-2 py-1 text-xs rounded-full bg-accent text-accent-foreground">
                       {payment.status}

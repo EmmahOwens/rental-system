@@ -4,13 +4,18 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { Home, Users, MessageSquare, CreditCard, Bell, Calendar, PieChart } from "lucide-react";
 
+// Format UGX currency
+const formatUGX = (amount: number) => {
+  return `UGX ${amount.toLocaleString("en-UG")}`;
+};
+
 export default function Dashboard() {
   const { currentUser } = useAuth();
   const isLandlord = currentUser?.role === 'landlord';
 
   const tenantMetrics = [
     { icon: Home, label: "Current Property", value: "Sunset Apartments, #304" },
-    { icon: CreditCard, label: "Next Payment", value: "June 1, 2023 - $1,200" },
+    { icon: CreditCard, label: "Next Payment", value: `June 1, 2023 - ${formatUGX(1200000)}` },
     { icon: MessageSquare, label: "Unread Messages", value: "2" },
     { icon: Bell, label: "Notifications", value: "3" },
     { icon: Calendar, label: "Upcoming Events", value: "Maintenance: May 25" },
@@ -19,7 +24,7 @@ export default function Dashboard() {
   const landlordMetrics = [
     { icon: Home, label: "Total Properties", value: "12" },
     { icon: Users, label: "Active Tenants", value: "28" },
-    { icon: CreditCard, label: "Monthly Revenue", value: "$32,400" },
+    { icon: CreditCard, label: "Monthly Revenue", value: formatUGX(32400000) },
     { icon: PieChart, label: "Occupancy Rate", value: "92%" },
     { icon: Bell, label: "Pending Actions", value: "5" },
   ];
@@ -92,7 +97,7 @@ export default function Dashboard() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-medium">Rent Reminder</h3>
-                      <p className="text-sm text-muted-foreground">Your rent payment is due in 5 days</p>
+                      <p className="text-sm text-muted-foreground">Your rent payment of {formatUGX(1200000)} is due in 5 days</p>
                       <p className="text-xs text-muted-foreground mt-1">May 25, 2023</p>
                     </div>
                     <span className="px-2 py-1 text-xs rounded-full bg-accent text-accent-foreground">New</span>

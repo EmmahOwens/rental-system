@@ -16,6 +16,7 @@ export default function VerifyEmail() {
   const location = useLocation();
   const { toast } = useToast();
   const email = location.state?.email;
+  const receivedOtp = location.state?.otp;
 
   useEffect(() => {
     if (!email) {
@@ -52,11 +53,13 @@ export default function VerifyEmail() {
 
   const handleResendOtp = async () => {
     try {
-      await sendVerificationEmail(email);
+      const newOtp = await sendVerificationEmail(email);
       toast({
         title: "OTP resent",
         description: "A new verification code has been sent to your email",
       });
+      // Update the displayed OTP
+      navigate(".", { state: { email, otp: newOtp }, replace: true });
     } catch (error: any) {
       toast({
         title: "Failed to resend OTP",
@@ -121,9 +124,15 @@ export default function VerifyEmail() {
                 placeholder="Enter 6-digit code"
                 required
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                For demonstration, use code: 123456
-              </p>
+              {receivedOtp && (
+                <div className="mt-2 p-3 bg-primary/10 rounded-lg text-center">
+                  <p className="text-sm font-medium">Your OTP Code (for demonstration):</p>
+                  <p className="text-lg font-bold text-primary mt-1">{receivedOtp}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    In a real app, this would be sent to your email
+                  </p>
+                </div>
+              )}
             </div>
             
             <button

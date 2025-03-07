@@ -17,6 +17,10 @@ import Payments from "./pages/Payments";
 import Messages from "./pages/Messages";
 import Tenants from "./pages/Tenants";
 import Applications from "./pages/Applications";
+import Notifications from "./pages/Notifications";
+import Calendar from "./pages/Calendar";
+import Support from "./pages/Support";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +74,21 @@ const App = () => (
                   <Messages />
                 </ProtectedRoute>
               } />
+              <Route path="/notifications" element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              } />
+              <Route path="/calendar" element={
+                <ProtectedRoute>
+                  <Calendar />
+                </ProtectedRoute>
+              } />
+              <Route path="/support" element={
+                <ProtectedRoute>
+                  <Support />
+                </ProtectedRoute>
+              } />
               
               {/* Landlord only routes */}
               <Route path="/tenants" element={
@@ -80,6 +99,11 @@ const App = () => (
               <Route path="/applications" element={
                 <ProtectedRoute requiredRole="landlord">
                   <Applications />
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute requiredRole="landlord">
+                  <Analytics />
                 </ProtectedRoute>
               } />
               
