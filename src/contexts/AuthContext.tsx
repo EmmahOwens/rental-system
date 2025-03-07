@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -150,11 +151,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(error.message);
     }
     
-    // Store temporary data for verification
+    // Store temporary data for verification, including password
     const userForVerification = {
       email,
       name,
-      role
+      role,
+      password // Store password temporarily for verification
     };
     setPendingVerificationUser(userForVerification);
     
