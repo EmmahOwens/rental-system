@@ -21,6 +21,7 @@ import Notifications from "./pages/Notifications";
 import Calendar from "./pages/Calendar";
 import Support from "./pages/Support";
 import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,11 @@ const App = () => (
               <Route path="/support" element={
                 <ProtectedRoute>
                   <Support />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               } />
               

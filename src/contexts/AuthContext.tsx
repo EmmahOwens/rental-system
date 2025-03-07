@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,6 +11,9 @@ export interface User {
   name: string;
   role: UserRole;
   verified: boolean;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 }
 
 // OTP generation function
@@ -28,6 +30,7 @@ type AuthContextType = {
   sendVerificationEmail: (email: string) => Promise<string>;
   verifyEmail: (otp: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (userData: Partial<User>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,7 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: user.email || '',
             name: user.user_metadata.name || '',
             role: user.user_metadata.role || 'tenant',
-            verified: user.email_confirmed_at ? true : false
+            verified: user.email_confirmed_at ? true : false,
+            firstName: user.user_metadata.firstName || '',
+            lastName: user.user_metadata.lastName || '',
+            phone: user.user_metadata.phone || ''
           };
           
           setCurrentUser(userData);
@@ -79,7 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: user.email || '',
             name: user.user_metadata.name || '',
             role: user.user_metadata.role || 'tenant',
-            verified: user.email_confirmed_at ? true : false
+            verified: user.email_confirmed_at ? true : false,
+            firstName: user.user_metadata.firstName || '',
+            lastName: user.user_metadata.lastName || '',
+            phone: user.user_metadata.phone || ''
           };
           
           setCurrentUser(userData);
@@ -217,6 +226,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(null);
   };
 
+  // Update user profile function
+  const updateUserProfile = async (userData: Partial<User>) => {
+    if (!currentUser) {
+      throw new Error('No authenticated user');
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Update user metadata in Supabase
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...userData
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Update local user state
+      setCurrentUser({
+        ...currentUser,
+        ...userData
+      });
+      
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     currentUser,
     isLoading,
@@ -225,7 +267,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     sendVerificationEmail,
     verifyEmail,
-    resetPassword
+    resetPassword,
+    updateUserProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
