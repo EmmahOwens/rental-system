@@ -52,6 +52,9 @@ export default function VerifyEmail() {
       
       // Determine the appropriate dashboard based on user role
       let dashboardUrl = '/dashboard';
+      
+      console.log("User role after verification:", userRole);
+      
       if (typeof userRole === 'string') {
         switch (userRole) {
           case 'admin':
@@ -68,6 +71,7 @@ export default function VerifyEmail() {
         }
       }
       
+      console.log("Setting redirect URL to:", dashboardUrl);
       setRedirectUrl(dashboardUrl);
       
       // Redirect to the appropriate dashboard after a short delay

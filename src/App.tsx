@@ -56,22 +56,31 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
 function RoleBasedDashboard() {
   const { currentUser, isLoading } = useAuth();
   
+  console.log("RoleBasedDashboard - Current User:", currentUser);
+  
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!currentUser) {
+    console.log("RoleBasedDashboard - No current user, redirecting to login");
     return <Navigate to="/login" />;
   }
   
+  console.log("RoleBasedDashboard - User role:", currentUser.role);
+  
   switch (currentUser.role) {
     case 'admin':
+      console.log("RoleBasedDashboard - Redirecting to admin dashboard");
       return <Navigate to="/admin/dashboard" replace />;
     case 'landlord':
+      console.log("RoleBasedDashboard - Redirecting to landlord dashboard");
       return <Navigate to="/landlord/dashboard" replace />;
     case 'tenant':
+      console.log("RoleBasedDashboard - Redirecting to tenant dashboard");
       return <Navigate to="/tenant/dashboard" replace />;
     default:
+      console.log("RoleBasedDashboard - Unknown role, redirecting to tenant dashboard");
       return <Navigate to="/tenant/dashboard" replace />;
   }
 }

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -228,7 +227,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Error updating user verification status:", updateError);
       }
       
-      const userRole = pendingVerificationUser.role;
+      // Store the role for redirection
+      const userRole = role;
+      console.log("User role to be returned:", userRole);
+      
       setPendingVerificationUser(null);
       setCurrentOTP("");
       
