@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { House, Key, User, MessageSquare, CreditCard, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatInTimeZone } from "date-fns-tz";
 
 export default function Index() {
   const { currentUser } = useAuth();
@@ -12,6 +13,16 @@ export default function Index() {
   const [scrollY, setScrollY] = useState(0);
   const featuresRef = useRef<HTMLDivElement>(null);
   const [featuresVisible, setFeaturesVisible] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time for Uganda timezone
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
@@ -37,32 +48,34 @@ export default function Index() {
   // Calculate opacity for hero background fade effect
   const heroOpacity = Math.max(0, 1 - scrollY / 500);
 
+  // Format date for Uganda timezone
+  const formattedDate = formatInTimeZone(
+    currentTime,
+    'Africa/Kampala',
+    'MMMM d, yyyy - h:mm:ss a'
+  );
+
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Hero background image with fade effect */}
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Full page hero background image with overlay */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0 transition-opacity duration-300"
+        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat z-0"
         style={{ 
           backgroundImage: "url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80')",
-          opacity: heroOpacity,
-          backgroundAttachment: "fixed"
         }}
       />
       
-      {/* Gradient overlay */}
+      {/* Gradient overlay for readability */}
       <div 
-        className="absolute inset-0 z-0"
-        style={{ 
-          background: `linear-gradient(to bottom, rgba(var(--background)/0.5) 0%, rgb(var(--background)) 100%)`,
-          opacity: heroOpacity
-        }}
+        className="fixed inset-0 z-0 bg-gradient-to-b from-background/70 via-background/80 to-background"
+        style={{ opacity: Math.max(0.4, heroOpacity) }}
       />
 
       <div className="container mx-auto px-4 relative z-10">
         <header className="py-6 flex justify-between items-center backdrop-blur-sm bg-background/30 rounded-b-lg">
           <div className="flex items-center gap-2">
             <House className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">CozyLeases</h1>
+            <h1 className="text-2xl font-bold">Rental Management System</h1>
           </div>
           
           <div className="flex items-center gap-4">
@@ -83,15 +96,16 @@ export default function Index() {
         </header>
 
         <main className="py-12">
-          <section className="flex flex-col lg:flex-row gap-10 items-center mb-20 min-h-[calc(100vh-200px)] justify-center">
-            <div className="lg:w-1/2">
+          {/* Hero section with text overlay on background image */}
+          <section className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center relative">
+            <div className="max-w-3xl backdrop-blur-sm bg-background/20 p-8 rounded-xl neumorph">
               <h2 className="text-4xl lg:text-5xl font-bold mb-6">
                 <span className="text-primary">Simplified</span> Property Management Solution
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
+              <p className="text-lg mb-8">
                 An all-in-one platform connecting landlords and tenants for a seamless rental experience. From payments to maintenance requests, we've got you covered.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
                   onClick={() => navigate("/signup")}
                   className="neumorph-button bg-primary text-primary-foreground px-8 py-3 text-lg"
@@ -105,10 +119,14 @@ export default function Index() {
                   Learn More
                 </button>
               </div>
+              <div className="mt-8 text-sm opacity-80">
+                {formattedDate} | Uganda Time
+              </div>
             </div>
           </section>
 
-          <section ref={featuresRef} className="mb-20">
+          {/* Features section with scroll animation */}
+          <section ref={featuresRef} className="mb-20 pt-20">
             <h2 className="text-3xl font-bold text-center mb-10">
               Features That Make Us <span className="text-primary">Different</span>
             </h2>
@@ -129,8 +147,6 @@ export default function Index() {
                     featuresVisible 
                       ? "translate-y-0 opacity-100" 
                       : "translate-y-20 opacity-0",
-                    // Staggered animation delay
-                    `delay-[${index * 150}ms]`
                   )}
                   style={{ 
                     transitionDelay: `${index * 150}ms` 
@@ -152,7 +168,7 @@ export default function Index() {
             </div>
           </section>
 
-          <section className="text-center mb-20">
+          <section className="text-center mb-20 py-16 backdrop-blur-sm bg-background/30 rounded-xl neumorph">
             <h2 className="text-3xl font-bold mb-6">Ready to Get Started?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join thousands of landlords and tenants who are already enjoying our streamlined rental management system.
@@ -166,15 +182,15 @@ export default function Index() {
           </section>
         </main>
 
-        <footer className="py-10 border-t border-border">
+        <footer className="py-10 border-t border-border backdrop-blur-sm bg-background/30">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
               <House className="h-6 w-6 text-primary" />
-              <p className="font-bold">CozyLeases</p>
+              <p className="font-bold">Rental Management System</p>
             </div>
             
             <p className="text-sm text-muted-foreground">
-              © 2023 CozyLeases. All rights reserved.
+              © 2025 Rental Management System. All rights reserved.
             </p>
           </div>
         </footer>
