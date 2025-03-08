@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: user.user_metadata.phone || ''
           };
           
+          console.log("User data loaded:", userData);
           setCurrentUser(userData);
         }
       }
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session);
       if (event === 'SIGNED_IN' && session) {
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -92,9 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: user.user_metadata.phone || ''
           };
           
+          console.log("User signed in:", userData);
           setCurrentUser(userData);
         }
       } else if (event === 'SIGNED_OUT') {
+        console.log("User signed out");
         setCurrentUser(null);
       }
     });
@@ -151,6 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(error.message);
     }
     
+    console.log("User signed up:", data);
+    
     // Store temporary data for verification, including password
     const userForVerification = {
       email,
@@ -193,6 +199,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (pendingVerificationUser) {
       const { email, password, role, name } = pendingVerificationUser;
       
+      console.log("Verifying user with role:", role);
+      
       // Automatically sign in the user after verification
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -200,9 +208,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
+        console.error("Error signing in after verification:", error);
         setIsLoading(false);
         throw new Error(`Error signing in after verification: ${error.message}`);
       }
+      
+      console.log("Successfully signed in after verification:", data);
       
       // Update user metadata to mark as verified
       const { error: updateError } = await supabase.auth.updateUser({
@@ -242,13 +253,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout function using Supabase
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      throw new Error(error.message);
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error during logout:", error);
+        throw new Error(error.message);
+      }
+      
+      setCurrentUser(null);
+    } catch (error) {
+      console.error("Caught error during logout:", error);
+      throw error;
     }
-    
-    setCurrentUser(null);
   };
 
   // Update user profile function

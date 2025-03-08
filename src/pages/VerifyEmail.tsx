@@ -72,6 +72,7 @@ export default function VerifyEmail() {
       
       // Redirect to the appropriate dashboard after a short delay
       setTimeout(() => {
+        console.log("Redirecting to:", dashboardUrl);
         navigate(dashboardUrl, { replace: true });
       }, 2000);
     } catch (error: any) {
