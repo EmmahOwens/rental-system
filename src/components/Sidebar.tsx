@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -46,8 +45,8 @@ function SidebarItem({ icon: Icon, label, to, collapsed }: SidebarItemProps) {
       <Icon 
         className={cn(
           "h-5 w-5",
-          collapsed && isDarkMode ? "text-white" : "",
-          collapsed && !isDarkMode ? "text-black" : ""
+          collapsed && isDarkMode && "text-white",
+          collapsed && !isDarkMode && "text-black"
         )} 
       />
       {!collapsed && <span>{label}</span>}
