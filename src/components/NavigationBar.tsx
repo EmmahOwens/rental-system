@@ -19,9 +19,13 @@ export function NavigationBar() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   // Format date for Uganda timezone

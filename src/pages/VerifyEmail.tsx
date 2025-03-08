@@ -13,6 +13,7 @@ export default function VerifyEmail() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [redirectUrl, setRedirectUrl] = useState("/dashboard");
   const { verifyEmail, sendVerificationEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,12 +63,16 @@ export default function VerifyEmail() {
           case 'tenant':
             dashboardUrl = '/tenant/dashboard';
             break;
+          default:
+            dashboardUrl = '/dashboard';
         }
       }
       
+      setRedirectUrl(dashboardUrl);
+      
       // Redirect to the appropriate dashboard after a short delay
       setTimeout(() => {
-        navigate(dashboardUrl);
+        navigate(dashboardUrl, { replace: true });
       }, 2000);
     } catch (error: any) {
       toast({
@@ -118,7 +123,7 @@ export default function VerifyEmail() {
               Your email has been verified successfully.
             </p>
             <p className="text-sm">
-              Redirecting to dashboard...
+              Redirecting to dashboard... <a href={redirectUrl} className="text-primary">Click here</a> if you're not redirected automatically.
             </p>
           </NeumorphicCard>
         </div>

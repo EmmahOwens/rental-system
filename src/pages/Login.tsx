@@ -44,7 +44,7 @@ export default function Login() {
           <div className="flex justify-center mb-3">
             <House className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold">Welcome to CozyLeases</h1>
+          <h1 className="text-3xl font-bold">Rental Management System</h1>
           <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
         

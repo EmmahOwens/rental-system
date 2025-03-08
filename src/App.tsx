@@ -27,7 +27,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Protected route component
-function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, requiredRole?: 'tenant' | 'landlord' }) {
+function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, requiredRole?: 'tenant' | 'landlord' | 'admin' }) {
   const { currentUser, isLoading } = useAuth();
   
   if (isLoading) {
@@ -39,10 +39,41 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
   }
   
   if (requiredRole && currentUser.role !== requiredRole) {
-    return <Navigate to="/dashboard" />;
+    // If user doesn't have the required role, redirect to the appropriate dashboard
+    if (currentUser.role === 'admin') {
+      return <Navigate to="/admin/dashboard" />;
+    } else if (currentUser.role === 'landlord') {
+      return <Navigate to="/landlord/dashboard" />;
+    } else {
+      return <Navigate to="/tenant/dashboard" />;
+    }
   }
   
   return children;
+}
+
+// RoleBasedDashboard component to handle redirection based on user role
+function RoleBasedDashboard() {
+  const { currentUser, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  
+  if (!currentUser) {
+    return <Navigate to="/login" />;
+  }
+  
+  switch (currentUser.role) {
+    case 'admin':
+      return <Navigate to="/admin/dashboard" replace />;
+    case 'landlord':
+      return <Navigate to="/landlord/dashboard" replace />;
+    case 'tenant':
+      return <Navigate to="/tenant/dashboard" replace />;
+    default:
+      return <Navigate to="/tenant/dashboard" replace />;
+  }
 }
 
 const App = () => (
@@ -59,12 +90,27 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
               
-              {/* Protected routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
+              {/* Dashboard router */}
+              <Route path="/dashboard" element={<RoleBasedDashboard />} />
+              
+              {/* Role-specific dashboards */}
+              <Route path="/tenant/dashboard" element={
+                <ProtectedRoute requiredRole="tenant">
                   <Dashboard />
                 </ProtectedRoute>
               } />
+              <Route path="/landlord/dashboard" element={
+                <ProtectedRoute requiredRole="landlord">
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/dashboard" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              {/* Protected routes */}
               <Route path="/payments" element={
                 <ProtectedRoute>
                   <Payments />

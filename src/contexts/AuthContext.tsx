@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
 // Types for our user roles
-export type UserRole = 'tenant' | 'landlord';
+export type UserRole = 'tenant' | 'landlord' | 'admin';
 
 // User interface
 export interface User {
@@ -26,10 +26,10 @@ type AuthContextType = {
   currentUser: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<void>;
+  signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<string>;
   logout: () => Promise<void>;
   sendVerificationEmail: (email: string) => Promise<string>;
-  verifyEmail: (otp: string) => Promise<void>;
+  verifyEmail: (otp: string) => Promise<UserRole>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (userData: Partial<User>) => Promise<void>;
 };
@@ -161,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPendingVerificationUser(userForVerification);
     
     setIsLoading(false);
+    return email;
   };
 
   // Send verification email with OTP
@@ -170,7 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentOTP(otp);
     
     // Here we would normally send an email with OTP
-    // For now, we'll just log it and return it for demo purposes
     console.log(`Verification OTP for ${email}: ${otp}`);
     
     // In a production app, we would send an email here using Supabase Edge Functions
@@ -190,21 +190,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     // In a production environment, we would update verification status in Supabase
-    // For now, we'll just simulate it
     if (pendingVerificationUser) {
-      const verifiedUser = {
-        ...pendingVerificationUser,
-        verified: true
-      };
+      const { email, password, role, name } = pendingVerificationUser;
       
-      // In a real implementation we'd update Supabase metadata here
+      // Automatically sign in the user after verification
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        setIsLoading(false);
+        throw new Error(`Error signing in after verification: ${error.message}`);
+      }
+      
+      // Update user metadata to mark as verified
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          name,
+          role,
+          verified: true
+        }
+      });
+      
+      if (updateError) {
+        console.error("Error updating user verification status:", updateError);
+      }
       
       const userRole = pendingVerificationUser.role;
       setPendingVerificationUser(null);
       setCurrentOTP("");
       
       setIsLoading(false);
-      return userRole; // Return the user role for redirection
+      return userRole;
     }
     
     setIsLoading(false);
