@@ -38,7 +38,7 @@ export default function LandlordDashboard() {
           .from('messages')
           .select(`
             *,
-            sender:sender_id(
+            profiles!sender_id(
               first_name,
               last_name
             )
@@ -52,7 +52,7 @@ export default function LandlordDashboard() {
         setRecentMessages(data.map(msg => ({
           id: msg.id,
           senderId: msg.sender_id,
-          senderName: msg.sender ? `${msg.sender.first_name} ${msg.sender.last_name}`.trim() : 'Unknown Tenant',
+          senderName: msg.profiles ? `${msg.profiles.first_name || ''} ${msg.profiles.last_name || ''}`.trim() : 'Unknown Tenant',
           content: msg.content,
           timestamp: formatTimestamp(msg.created_at),
           isRead: msg.read

@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -98,6 +99,7 @@ export function Sidebar() {
     { icon: UserPlus, label: "Applications", to: "/applications" },
     { icon: Activity, label: "Analytics", to: "/analytics" },
     { icon: Bell, label: "Notifications", to: "/notifications" },
+    { icon: CalendarDays, label: "Calendar", to: "/calendar" },
     { icon: Settings, label: "Settings", to: "/settings" },
   ];
 

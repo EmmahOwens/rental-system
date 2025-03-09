@@ -33,7 +33,7 @@ export default function Messages() {
             .select(`
               sender_id, 
               receiver_id, 
-              sender:sender_id(
+              profiles!sender_id(
                 first_name, 
                 last_name, 
                 avatar_url
@@ -50,11 +50,11 @@ export default function Messages() {
           data.forEach(msg => {
             const contactId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
             if (!uniqueUsers.has(contactId)) {
-              const profile = msg.sender || { first_name: 'Unknown', last_name: 'User' };
+              const profile = msg.profiles || { first_name: 'Unknown', last_name: 'User' };
               uniqueUsers.set(contactId, {
                 id: contactId,
-                name: `${profile.first_name} ${profile.last_name}`.trim(),
-                avatar: profile.avatar_url || generateInitials(`${profile.first_name} ${profile.last_name}`),
+                name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User',
+                avatar: profile.avatar_url || generateInitials(`${profile.first_name || ''} ${profile.last_name || ''}`),
               });
             }
           });
@@ -69,7 +69,7 @@ export default function Messages() {
               property_id, 
               properties(
                 landlord_id, 
-                landlord:landlord_id(
+                profiles!landlord_id(
                   first_name, 
                   last_name, 
                   avatar_url
@@ -82,14 +82,14 @@ export default function Messages() {
           
           if (tenancyError && tenancyError.code !== 'PGRST116') throw tenancyError;
           
-          if (tenancies) {
-            const landlord = tenancies.properties.landlord;
+          if (tenancies && tenancies.properties.profiles) {
+            const landlord = tenancies.properties.profiles;
             const landlordId = tenancies.properties.landlord_id;
             
             setConversations([{
               id: landlordId,
-              name: `${landlord.first_name} ${landlord.last_name}`.trim() || 'Your Landlord',
-              avatar: landlord.avatar_url || generateInitials(`${landlord.first_name} ${landlord.last_name}`),
+              name: `${landlord.first_name || ''} ${landlord.last_name || ''}`.trim() || 'Your Landlord',
+              avatar: landlord.avatar_url || generateInitials(`${landlord.first_name || ''} ${landlord.last_name || ''}`),
               unread: false // You could calculate this from unread messages
             }]);
           } else {
