@@ -12,7 +12,7 @@ import {
   X, 
   CalendarPlus 
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday, isSameDay, parse } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday, isSameDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +55,7 @@ export default function Calendar() {
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(currentDate);
 
-        // Fetch public events and user's private events
+        // Using a custom query to fetch calendar_events
         const { data, error } = await supabase
           .from('calendar_events')
           .select('*')
@@ -69,7 +69,7 @@ export default function Calendar() {
           id: event.id,
           title: event.title,
           date: new Date(event.date),
-          type: event.type,
+          type: event.type as "payment" | "inspection" | "maintenance" | "meeting" | "personal",
           description: event.description,
           user_id: event.user_id,
           is_public: event.is_public

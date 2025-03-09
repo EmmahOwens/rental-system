@@ -81,6 +81,7 @@ export function Sidebar() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Removed Documents tab from both tenant and landlord links
   const tenantLinks = [
     { icon: Home, label: "Dashboard", to: "/dashboard" },
     { icon: CreditCard, label: "Payments", to: "/payments" },
