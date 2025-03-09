@@ -14,7 +14,7 @@ export default function VerifyEmail() {
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [redirectUrl, setRedirectUrl] = useState("/dashboard");
-  const { verifyEmail, sendVerificationEmail, currentUser } = useAuth();
+  const { verifyEmail, sendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -43,8 +43,10 @@ export default function VerifyEmail() {
     setIsSubmitting(true);
   
     try {
+      // verifyEmail returns the user role
       const userRole = await verifyEmail(otp);
       setIsSuccess(true);
+      
       toast({
         title: "Email verified",
         description: "Your email has been verified successfully!",
@@ -55,20 +57,12 @@ export default function VerifyEmail() {
       
       console.log("User role after verification:", userRole);
       
-      if (typeof userRole === 'string') {
-        switch (userRole) {
-          case 'admin':
-            dashboardUrl = '/admin/dashboard';
-            break;
-          case 'landlord':
-            dashboardUrl = '/landlord/dashboard';
-            break;
-          case 'tenant':
-            dashboardUrl = '/tenant/dashboard';
-            break;
-          default:
-            dashboardUrl = '/dashboard';
-        }
+      if (userRole === 'admin') {
+        dashboardUrl = '/admin/dashboard';
+      } else if (userRole === 'landlord') {
+        dashboardUrl = '/landlord/dashboard';
+      } else if (userRole === 'tenant') {
+        dashboardUrl = '/tenant/dashboard';
       }
       
       console.log("Setting redirect URL to:", dashboardUrl);

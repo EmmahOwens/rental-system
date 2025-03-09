@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -54,6 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
+          console.log("User metadata:", user.user_metadata);
+          
           const userData: User = {
             id: user.id,
             email: user.email || '',
@@ -82,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
+          console.log("User metadata after sign in:", user.user_metadata);
+          
           const userData: User = {
             id: user.id,
             email: user.email || '',
@@ -156,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     console.log("User signed up:", data);
     
-    // Store temporary data for verification, including password
+    // Store temporary data for verification, including role
     const userForVerification = {
       email,
       name,
@@ -227,19 +232,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Error updating user verification status:", updateError);
       }
       
-      // Store the role for redirection
-      const userRole = role;
-      console.log("User role to be returned:", userRole);
-      
       setPendingVerificationUser(null);
       setCurrentOTP("");
       
       setIsLoading(false);
-      return userRole;
+      return role; // Return the role for redirection
     }
     
     setIsLoading(false);
-    return 'tenant'; // Default role if no pending user (fallback)
+    throw new Error('No pending verification user');
   };
   
   // Reset password function

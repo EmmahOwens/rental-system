@@ -13,6 +13,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
+import TenantDashboard from "./pages/TenantDashboard";
+import LandlordDashboard from "./pages/LandlordDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import Payments from "./pages/Payments";
 import Messages from "./pages/Messages";
 import Tenants from "./pages/Tenants";
@@ -105,17 +108,17 @@ const App = () => (
               {/* Role-specific dashboards */}
               <Route path="/tenant/dashboard" element={
                 <ProtectedRoute requiredRole="tenant">
-                  <Dashboard />
+                  <TenantDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/landlord/dashboard" element={
                 <ProtectedRoute requiredRole="landlord">
-                  <Dashboard />
+                  <LandlordDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/admin/dashboard" element={
                 <ProtectedRoute requiredRole="admin">
-                  <Dashboard />
+                  <AdminDashboard />
                 </ProtectedRoute>
               } />
               
