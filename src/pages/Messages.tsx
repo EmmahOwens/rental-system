@@ -30,7 +30,15 @@ export default function Messages() {
           // Landlords see all tenants they communicate with
           const { data, error } = await supabase
             .from('messages')
-            .select('sender_id, receiver_id, profiles!sender_fk(first_name, last_name, avatar_url)')
+            .select(`
+              sender_id, 
+              receiver_id, 
+              sender:sender_id(
+                first_name, 
+                last_name, 
+                avatar_url
+              )
+            `)
             .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
             .order('created_at', { ascending: false });
           
@@ -42,7 +50,7 @@ export default function Messages() {
           data.forEach(msg => {
             const contactId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
             if (!uniqueUsers.has(contactId)) {
-              const profile = msg.profiles || { first_name: 'Unknown', last_name: 'User' };
+              const profile = msg.sender || { first_name: 'Unknown', last_name: 'User' };
               uniqueUsers.set(contactId, {
                 id: contactId,
                 name: `${profile.first_name} ${profile.last_name}`.trim(),
@@ -57,7 +65,17 @@ export default function Messages() {
           // First get the property the tenant lives in
           const { data: tenancies, error: tenancyError } = await supabase
             .from('tenancies')
-            .select('property_id, properties(landlord_id, landlord:profiles(first_name, last_name, avatar_url))')
+            .select(`
+              property_id, 
+              properties(
+                landlord_id, 
+                landlord:landlord_id(
+                  first_name, 
+                  last_name, 
+                  avatar_url
+                )
+              )
+            `)
             .eq('tenant_id', currentUser.id)
             .eq('active', true)
             .single();

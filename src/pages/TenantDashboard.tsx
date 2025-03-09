@@ -35,7 +35,13 @@ export default function TenantDashboard() {
         setLoading(true);
         const { data, error } = await supabase
           .from('messages')
-          .select('*, profiles!sender_fk(first_name, last_name)')
+          .select(`
+            *,
+            sender:sender_id(
+              first_name,
+              last_name
+            )
+          `)
           .eq('receiver_id', currentUser.id)
           .order('created_at', { ascending: false })
           .limit(3);
@@ -45,7 +51,7 @@ export default function TenantDashboard() {
         setRecentMessages(data.map(msg => ({
           id: msg.id,
           senderId: msg.sender_id,
-          senderName: msg.profiles ? `${msg.profiles.first_name} ${msg.profiles.last_name}`.trim() : 'Your Landlord',
+          senderName: msg.sender ? `${msg.sender.first_name} ${msg.sender.last_name}`.trim() : 'Your Landlord',
           content: msg.content,
           timestamp: formatTimestamp(msg.created_at),
           isRead: msg.read
