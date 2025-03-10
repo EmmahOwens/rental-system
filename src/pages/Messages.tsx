@@ -20,8 +20,8 @@ type Message = {
   receiver_id: string;
   sender_id: string;
   // Add the profile information for join queries
-  sender_profile?: Profile;
-  receiver_profile?: Profile;
+  profiles_sender?: Profile;
+  profiles_receiver?: Profile;
 };
 
 export default function Messages() {
@@ -40,8 +40,8 @@ export default function Messages() {
           .from("messages")
           .select(`
             *,
-            sender_profile:sender_id(*),
-            receiver_profile:receiver_id(*)
+            profiles_sender:profiles!sender_id(*),
+            profiles_receiver:profiles!receiver_id(*)
           `)
           .or(`receiver_id.eq.${currentUser.id},sender_id.eq.${currentUser.id}`);
 
@@ -75,7 +75,7 @@ export default function Messages() {
       ) : (
         messages.map((message) => {
           const isCurrentUserSender = message.sender_id === currentUser.id;
-          const profile = isCurrentUserSender ? message.receiver_profile : message.sender_profile;
+          const profile = isCurrentUserSender ? message.profiles_receiver : message.profiles_sender;
           const profileImageUrl = profile?.avatar_url || `/placeholder.svg`;
           const profileName = `${profile?.first_name || ''} ${profile?.last_name || ''}`;
 
