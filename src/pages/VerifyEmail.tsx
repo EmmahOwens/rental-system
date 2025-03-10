@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -49,13 +48,12 @@ export default function VerifyEmail() {
         description: "Your email has been verified successfully!",
       });
       
-      // Redirect to the dashboard regardless of role
-      // The ProtectedRoute component in App.tsx will handle role-based access
-      const dashboardUrl = '/dashboard';
+      // Redirect based on user role
+      let dashboardUrl = '/dashboard';
       
-      // Redirect to the appropriate dashboard after a short delay
+      // Redirect after a short delay to ensure state updates properly
       setTimeout(() => {
-        navigate(dashboardUrl);
+        navigate(dashboardUrl, { replace: true });
       }, 2000);
     } catch (error: any) {
       toast({

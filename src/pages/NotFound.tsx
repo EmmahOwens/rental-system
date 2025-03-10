@@ -22,7 +22,7 @@ export default function NotFound() {
         </p>
         <button 
           onClick={() => navigate("/")}
-          className="neumorph-button flex items-center gap-2 mx-auto"
+          className="neumorph-button flex items-center justify-center gap-2 mx-auto"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home
