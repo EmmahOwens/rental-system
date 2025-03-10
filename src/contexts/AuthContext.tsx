@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -236,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentOTP("");
       
       setIsLoading(false);
+      console.log("Returning role for redirection:", role);
       return role; // Return the role for redirection
     }
     

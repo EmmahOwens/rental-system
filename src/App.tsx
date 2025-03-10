@@ -67,12 +67,14 @@ function RoleBasedDashboard() {
   
   console.log("Redirecting based on role:", currentUser.role);
   
-  switch (currentUser.role) {
-    case 'landlord':
-      return <Navigate to="/landlord/dashboard" replace />;
-    case 'tenant':
-    default:
-      return <Navigate to="/tenant/dashboard" replace />;
+  // Explicit redirection based on role with no default fallback to ensure predictable behavior
+  if (currentUser.role === 'landlord') {
+    return <Navigate to="/landlord/dashboard" replace />;
+  } else if (currentUser.role === 'tenant') {
+    return <Navigate to="/tenant/dashboard" replace />;
+  } else {
+    console.log("Unknown role, defaulting to tenant dashboard");
+    return <Navigate to="/tenant/dashboard" replace />;
   }
 }
 

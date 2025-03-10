@@ -49,12 +49,14 @@ export default function VerifyEmail() {
         description: "Your email has been verified successfully!",
       });
       
-      // Determine dashboard URL based on role
-      let dashboardUrl = '/dashboard';
+      // Redirect based on user role
+      let dashboardUrl = userRole === 'landlord' ? '/landlord/dashboard' : '/tenant/dashboard';
+      
+      console.log("Verification successful, redirecting to:", dashboardUrl);
       
       // Redirect after a short delay to ensure state updates properly
       setTimeout(() => {
-        console.log("Redirecting to dashboard with role:", userRole);
+        console.log("Now redirecting with role:", userRole);
         navigate(dashboardUrl, { replace: true });
       }, 2000);
     } catch (error: any) {
