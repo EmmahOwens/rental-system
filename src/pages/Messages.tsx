@@ -1,8 +1,16 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+type Profile = {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+};
 
 type Message = {
   id: string;
@@ -11,6 +19,9 @@ type Message = {
   read: boolean;
   receiver_id: string;
   sender_id: string;
+  // Add the profile information for join queries
+  sender_profile?: Profile;
+  receiver_profile?: Profile;
 };
 
 export default function Messages() {
@@ -27,12 +38,16 @@ export default function Messages() {
         setLoading(true);
         const { data, error } = await supabase
           .from("messages")
-          .select("*")
+          .select(`
+            *,
+            sender_profile:sender_id(*),
+            receiver_profile:receiver_id(*)
+          `)
           .or(`receiver_id.eq.${currentUser.id},sender_id.eq.${currentUser.id}`);
 
         if (error) throw error;
 
-        setMessages(data);
+        setMessages(data || []);
       } catch (error) {
         console.error("Error fetching messages:", error);
         toast({
@@ -59,18 +74,19 @@ export default function Messages() {
         <p>No messages found.</p>
       ) : (
         messages.map((message) => {
-          const profile = message.sender_id === currentUser.id ? message.receiver : message.sender;
+          const isCurrentUserSender = message.sender_id === currentUser.id;
+          const profile = isCurrentUserSender ? message.receiver_profile : message.sender_profile;
           const profileImageUrl = profile?.avatar_url || `/placeholder.svg`;
-          const senderName = `${profile?.first_name || ''} ${profile?.last_name || ''}`;
+          const profileName = `${profile?.first_name || ''} ${profile?.last_name || ''}`;
 
           return (
             <div key={message.id} className="flex items-center mb-4">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={profileImageUrl} alt={senderName} />
-                <AvatarFallback>{senderName.charAt(0)}</AvatarFallback>
+                <AvatarImage src={profileImageUrl} alt={profileName} />
+                <AvatarFallback>{profileName.charAt(0) || '?'}</AvatarFallback>
               </Avatar>
               <div className="ml-3">
-                <p className="font-semibold">{senderName}</p>
+                <p className="font-semibold">{profileName || 'Unknown User'}</p>
                 <p>{message.content}</p>
                 <p className="text-sm text-gray-500">{new Date(message.created_at).toLocaleString()}</p>
               </div>

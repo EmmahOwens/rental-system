@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { useNavigate } from "react-router-dom";
 import { House, LogOut } from "lucide-react";
-import { formatInTimeZone } from "date-fns-tz";
+import { format } from "date-fns";
 import { useState, useEffect } from "react";
 
 export function NavigationBar() {
@@ -28,10 +28,9 @@ export function NavigationBar() {
     }
   };
 
-  // Format date for Uganda timezone
-  const formattedTime = formatInTimeZone(
+  // Format date without timezone dependency
+  const formattedTime = format(
     currentTime,
-    'Africa/Kampala',
     'MMM d, yyyy - h:mm:ss a'
   );
 
