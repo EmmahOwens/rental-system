@@ -61,8 +61,11 @@ function RoleBasedDashboard() {
   }
   
   if (!currentUser) {
+    console.log("No current user, redirecting to login");
     return <Navigate to="/login" />;
   }
+  
+  console.log("Redirecting based on role:", currentUser.role);
   
   switch (currentUser.role) {
     case 'landlord':

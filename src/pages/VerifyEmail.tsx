@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -48,11 +49,12 @@ export default function VerifyEmail() {
         description: "Your email has been verified successfully!",
       });
       
-      // Redirect based on user role
+      // Determine dashboard URL based on role
       let dashboardUrl = '/dashboard';
       
       // Redirect after a short delay to ensure state updates properly
       setTimeout(() => {
+        console.log("Redirecting to dashboard with role:", userRole);
         navigate(dashboardUrl, { replace: true });
       }, 2000);
     } catch (error: any) {
