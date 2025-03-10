@@ -234,29 +234,48 @@ export default function Applications() {
                   </td>
                   <td className="py-4">
                     <div className="flex gap-2">
-                      <button className="neumorph-button text-sm py-1 px-2 flex items-center gap-1">
+                      <button 
+                        className="neumorph-button text-sm py-1 px-2 flex items-center gap-1"
+                        onClick={() => handleViewApplication(app)}
+                      >
                         <Eye className="h-3 w-3" />
                         View
                       </button>
                       <button 
                         className="neumorph-button text-sm py-1 px-2 flex items-center gap-1 bg-primary text-primary-foreground"
-                        onClick={() => {
-                          toast({
-                            title: "Application Approved",
-                            description: `Successfully approved ${app.name}'s application.`
-                          });
-                        }}
+                        onClick={() => handleApproveApplication(app.id, app.name)}
                       >
                         <CheckCircle className="h-3 w-3" />
                         Approve
                       </button>
                       <button 
                         className="neumorph-button text-sm py-1 px-2 flex items-center gap-1 text-destructive"
-                        onClick={() => {
-                          toast({
-                            title: "Application Rejected",
-                            description: `Successfully rejected ${app.name}'s application.`
-                          });
+                        onClick={async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('rental_applications')
+                              .update({ status: 'Rejected' })
+                              .eq('id', app.id);
+                              
+                            if (error) throw error;
+                            
+                            // Update local state
+                            setApplications(prev => 
+                              prev.map(a => a.id === app.id ? {...a, status: 'Rejected'} : a)
+                            );
+                            
+                            toast({
+                              title: "Application rejected",
+                              description: `${app.name}'s application has been rejected`,
+                            });
+                          } catch (error) {
+                            console.error('Error rejecting application:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to reject application",
+                              variant: "destructive",
+                            });
+                          }
                         }}
                       >
                         <X className="h-3 w-3" />

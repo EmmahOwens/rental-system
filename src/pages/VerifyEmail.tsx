@@ -52,6 +52,7 @@ export default function VerifyEmail() {
         description: "Your email has been verified successfully!",
       });
       
+<<<<<<< HEAD
       // Determine the appropriate dashboard based on user role
       let dashboardUrl = '/dashboard';
       
@@ -64,6 +65,11 @@ export default function VerifyEmail() {
       } else if (userRole === 'tenant') {
         dashboardUrl = '/tenant/dashboard';
       }
+=======
+      // Redirect to the dashboard regardless of role
+      // The ProtectedRoute component in App.tsx will handle role-based access
+      const dashboardUrl = '/dashboard';
+>>>>>>> 69424dd (Fix 404 error)
       
       console.log("Setting redirect URL to:", dashboardUrl);
       setRedirectUrl(dashboardUrl);
