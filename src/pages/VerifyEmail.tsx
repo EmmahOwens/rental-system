@@ -13,8 +13,7 @@ export default function VerifyEmail() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [redirectUrl, setRedirectUrl] = useState("/dashboard");
-  const { verifyEmail, sendVerificationEmail } = useAuth();
+  const { verifyEmail, sendVerificationEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -43,41 +42,20 @@ export default function VerifyEmail() {
     setIsSubmitting(true);
   
     try {
-      // verifyEmail returns the user role
       const userRole = await verifyEmail(otp);
       setIsSuccess(true);
-      
       toast({
         title: "Email verified",
         description: "Your email has been verified successfully!",
       });
       
-<<<<<<< HEAD
-      // Determine the appropriate dashboard based on user role
-      let dashboardUrl = '/dashboard';
-      
-      console.log("User role after verification:", userRole);
-      
-      if (userRole === 'admin') {
-        dashboardUrl = '/admin/dashboard';
-      } else if (userRole === 'landlord') {
-        dashboardUrl = '/landlord/dashboard';
-      } else if (userRole === 'tenant') {
-        dashboardUrl = '/tenant/dashboard';
-      }
-=======
       // Redirect to the dashboard regardless of role
       // The ProtectedRoute component in App.tsx will handle role-based access
       const dashboardUrl = '/dashboard';
->>>>>>> 69424dd (Fix 404 error)
-      
-      console.log("Setting redirect URL to:", dashboardUrl);
-      setRedirectUrl(dashboardUrl);
       
       // Redirect to the appropriate dashboard after a short delay
       setTimeout(() => {
-        console.log("Redirecting to:", dashboardUrl);
-        navigate(dashboardUrl, { replace: true });
+        navigate(dashboardUrl);
       }, 2000);
     } catch (error: any) {
       toast({
@@ -128,7 +106,7 @@ export default function VerifyEmail() {
               Your email has been verified successfully.
             </p>
             <p className="text-sm">
-              Redirecting to dashboard... <a href={redirectUrl} className="text-primary">Click here</a> if you're not redirected automatically.
+              Redirecting to dashboard...
             </p>
           </NeumorphicCard>
         </div>
