@@ -37,15 +37,17 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
   }
   
   if (!currentUser) {
+    console.log("No user found, redirecting to login");
     return <Navigate to="/login" />;
   }
   
   if (requiredRole && currentUser.role !== requiredRole) {
+    console.log(`User role ${currentUser.role} doesn't match required role ${requiredRole}, redirecting`);
     // If user doesn't have the required role, redirect to the appropriate dashboard
     if (currentUser.role === 'landlord') {
-      return <Navigate to="/landlord/dashboard" />;
+      return <Navigate to="/landlord/dashboard" replace />;
     } else {
-      return <Navigate to="/tenant/dashboard" />;
+      return <Navigate to="/tenant/dashboard" replace />;
     }
   }
   
@@ -57,20 +59,23 @@ function RoleBasedDashboard() {
   const { currentUser, isLoading } = useAuth();
   
   if (isLoading) {
+    console.log("Loading user data...");
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!currentUser) {
     console.log("No current user, redirecting to login");
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   
   console.log("Redirecting based on role:", currentUser.role);
   
-  // Explicit redirection based on role with no default fallback to ensure predictable behavior
+  // Explicit redirection based on role
   if (currentUser.role === 'landlord') {
+    console.log("Redirecting to landlord dashboard");
     return <Navigate to="/landlord/dashboard" replace />;
   } else if (currentUser.role === 'tenant') {
+    console.log("Redirecting to tenant dashboard");
     return <Navigate to="/tenant/dashboard" replace />;
   } else {
     console.log("Unknown role, defaulting to tenant dashboard");

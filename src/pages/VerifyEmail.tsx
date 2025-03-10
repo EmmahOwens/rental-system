@@ -21,10 +21,18 @@ export default function VerifyEmail() {
   const receivedOtp = location.state?.otp;
 
   useEffect(() => {
+    // Redirect if no email in state
     if (!email) {
+      console.log("No email found in state, redirecting to signup");
       navigate("/signup");
     }
-  }, [email, navigate]);
+    
+    // Redirect if already verified
+    if (currentUser?.verified) {
+      console.log("User already verified, redirecting to dashboard");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [email, navigate, currentUser]);
 
   useEffect(() => {
     // Countdown timer for OTP resend
@@ -42,24 +50,33 @@ export default function VerifyEmail() {
     setIsSubmitting(true);
   
     try {
+      console.log("Submitting OTP:", otp);
       const userRole = await verifyEmail(otp);
+      console.log("Verification successful, received role:", userRole);
+      
       setIsSuccess(true);
       toast({
         title: "Email verified",
         description: "Your email has been verified successfully!",
       });
       
-      // Redirect based on user role
-      let dashboardUrl = userRole === 'landlord' ? '/landlord/dashboard' : '/tenant/dashboard';
+      // Determine specific dashboard URL based on role
+      let dashboardUrl;
+      if (userRole === 'landlord') {
+        dashboardUrl = '/landlord/dashboard';
+      } else {
+        dashboardUrl = '/tenant/dashboard';
+      }
       
-      console.log("Verification successful, redirecting to:", dashboardUrl);
+      console.log("Will redirect to:", dashboardUrl);
       
       // Redirect after a short delay to ensure state updates properly
       setTimeout(() => {
-        console.log("Now redirecting with role:", userRole);
+        console.log("Now redirecting to:", dashboardUrl);
         navigate(dashboardUrl, { replace: true });
       }, 2000);
     } catch (error: any) {
+      console.error("Verification error:", error);
       toast({
         title: "Verification failed",
         description: error.message || "Invalid verification code",
