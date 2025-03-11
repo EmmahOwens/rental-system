@@ -33,12 +33,13 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
   const { currentUser, isLoading } = useAuth();
   
   if (isLoading) {
+    console.log("Loading user data in ProtectedRoute...");
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!currentUser) {
-    console.log("No user found, redirecting to login");
-    return <Navigate to="/login" />;
+    console.log("No user found in ProtectedRoute, redirecting to login");
+    return <Navigate to="/login" replace />;
   }
   
   if (requiredRole && currentUser.role !== requiredRole) {
@@ -59,26 +60,26 @@ function RoleBasedDashboard() {
   const { currentUser, isLoading } = useAuth();
   
   if (isLoading) {
-    console.log("Loading user data...");
+    console.log("Loading user data in RoleBasedDashboard...");
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!currentUser) {
-    console.log("No current user, redirecting to login");
+    console.log("No current user in RoleBasedDashboard, redirecting to login");
     return <Navigate to="/login" replace />;
   }
   
-  console.log("Redirecting based on role:", currentUser.role);
+  console.log("RoleBasedDashboard - Redirecting based on role:", currentUser.role);
   
   // Explicit redirection based on role
   if (currentUser.role === 'landlord') {
-    console.log("Redirecting to landlord dashboard");
+    console.log("RoleBasedDashboard - Redirecting to landlord dashboard");
     return <Navigate to="/landlord/dashboard" replace />;
   } else if (currentUser.role === 'tenant') {
-    console.log("Redirecting to tenant dashboard");
+    console.log("RoleBasedDashboard - Redirecting to tenant dashboard");
     return <Navigate to="/tenant/dashboard" replace />;
   } else {
-    console.log("Unknown role, defaulting to tenant dashboard");
+    console.log("RoleBasedDashboard - Unknown role, defaulting to tenant dashboard");
     return <Navigate to="/tenant/dashboard" replace />;
   }
 }

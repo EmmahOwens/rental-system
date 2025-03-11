@@ -21,10 +21,14 @@ export default function VerifyEmail() {
   const receivedOtp = location.state?.otp;
 
   useEffect(() => {
+    console.log("VerifyEmail component mounted, email:", email);
+    console.log("Current user status:", currentUser);
+    
     // Redirect if no email in state
     if (!email) {
       console.log("No email found in state, redirecting to signup");
-      navigate("/signup");
+      navigate("/signup", { replace: true });
+      return;
     }
     
     // Redirect if already verified

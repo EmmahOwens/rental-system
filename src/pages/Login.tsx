@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -11,18 +11,31 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, currentUser, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (currentUser && !isLoading) {
+      console.log("User already logged in, redirecting to dashboard");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [currentUser, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      console.log("Attempting login with email:", email);
       await login(email, password);
-      navigate("/dashboard");
+      console.log("Login successful, redirecting to dashboard");
+      
+      // Redirect to dashboard - the RoleBasedDashboard component will handle the proper redirection
+      navigate("/dashboard", { replace: true });
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again",
@@ -32,6 +45,11 @@ export default function Login() {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading state if auth is loading
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">

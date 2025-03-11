@@ -150,7 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           name,
           role,
-        }
+        },
+        // Use the current app URL instead of hardcoded localhost
+        emailRedirectTo: `${window.location.origin}/dashboard`
       }
     });
     
@@ -246,8 +248,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Reset password function
   const resetPassword = async (email: string) => {
+    // Use the current app URL instead of hardcoded URLs
+    const redirectTo = `${window.location.origin}/reset-password`;
+    console.log("Reset password redirect URL:", redirectTo);
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo,
     });
     
     if (error) {
