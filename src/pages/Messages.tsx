@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +17,7 @@ type Profile = {
   role?: string | null;
 };
 
-// Define message type with explicit properties (no nested Profile references)
+// Using a type with inline properties instead of nested references
 type Message = {
   id: string;
   content: string;
@@ -26,7 +25,7 @@ type Message = {
   read: boolean | null;
   receiver_id: string;
   sender_id: string;
-  // Use flat object structures instead of Profile references
+  // Use primitive properties instead of references to avoid circular dependency
   profiles_sender?: {
     id: string;
     first_name?: string | null;
