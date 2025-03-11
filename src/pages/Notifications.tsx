@@ -1,10 +1,11 @@
-
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { Bell, CheckCircle, Clock, Info, AlertTriangle } from "lucide-react";
+import { useIconColor } from "@/hooks/use-icon-color";
 
 export default function Notifications() {
-  // Mock notifications data
+  const iconColor = useIconColor();
+  
   const notifications = [
     {
       id: 1,
@@ -43,15 +44,15 @@ export default function Notifications() {
   const getIcon = (type: string) => {
     switch (type) {
       case "reminder":
-        return <Clock className="h-5 w-5 text-blue-500" />;
+        return <Clock className="h-5 w-5 text-blue-500" color="hsl(210, 100%, 60%)" />;
       case "success":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" color="hsl(142, 76%, 36%)" />;
       case "info":
-        return <Info className="h-5 w-5 text-primary" />;
+        return <Info className="h-5 w-5 text-primary" color={iconColor} />;
       case "alert":
-        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+        return <AlertTriangle className="h-5 w-5 text-amber-500" color="hsl(38, 92%, 50%)" />;
       default:
-        return <Bell className="h-5 w-5 text-primary" />;
+        return <Bell className="h-5 w-5 text-primary" color={iconColor} />;
     }
   };
 
@@ -65,7 +66,7 @@ export default function Notifications() {
       <NeumorphicCard className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
+            <Bell className="h-5 w-5 text-primary" color={iconColor} />
             All Notifications
           </h2>
           <button className="neumorph-button text-sm">Mark all as read</button>

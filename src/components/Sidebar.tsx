@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -21,6 +20,7 @@ import {
 import { NavLink } from "react-router-dom";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useIconColor } from "@/hooks/use-icon-color";
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -31,7 +31,7 @@ interface SidebarItemProps {
 }
 
 function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemProps) {
-  const { isDarkMode } = useTheme();
+  const iconColor = useIconColor();
   
   return (
     <NavLink
@@ -47,11 +47,8 @@ function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemP
       }
     >
       <Icon 
-        className={cn(
-          "h-5 w-5",
-          collapsed && isDarkMode && "text-white",
-          collapsed && !isDarkMode && "text-black"
-        )} 
+        className="h-5 w-5"
+        color={iconColor}
       />
       {!collapsed && <span>{label}</span>}
     </NavLink>
@@ -64,9 +61,9 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const iconColor = useIconColor();
 
   useEffect(() => {
-    // Auto-collapse on mobile devices
     if (isMobile) {
       setCollapsed(true);
       setSidebarOpen(false);
@@ -90,7 +87,6 @@ export function Sidebar() {
     }
   };
 
-  // Removed Documents tab from both tenant and landlord links
   const tenantLinks = [
     { icon: Home, label: "Dashboard", to: "/dashboard" },
     { icon: CreditCard, label: "Payments", to: "/payments" },
@@ -115,7 +111,6 @@ export function Sidebar() {
 
   const links = role === 'landlord' ? landlordLinks : tenantLinks;
 
-  // Mobile sidebar toggle button (floating)
   if (isMobile && !sidebarOpen) {
     return (
       <>
@@ -124,7 +119,7 @@ export function Sidebar() {
           className="fixed z-20 top-16 left-4 neumorph p-2 rounded-full shadow-lg"
           aria-label="Open menu"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-5 w-5" color={iconColor} />
         </button>
       </>
     );
@@ -155,11 +150,11 @@ export function Sidebar() {
               aria-label={isMobile ? "Close sidebar" : (collapsed ? "Expand sidebar" : "Collapse sidebar")}
             >
               {isMobile ? (
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" color={iconColor} />
               ) : collapsed ? (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" color={iconColor} />
               ) : (
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" color={iconColor} />
               )}
             </button>
           </div>

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
@@ -6,6 +5,7 @@ import { Home, Users, MessageSquare, CreditCard, Bell, Calendar, PieChart, Build
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useIconColor } from "@/hooks/use-icon-color";
 
 // Format UGX currency
 const formatUGX = (amount: number) => {
@@ -17,6 +17,7 @@ export default function LandlordDashboard() {
   const navigate = useNavigate();
   const [recentMessages, setRecentMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const iconColor = useIconColor();
 
   const landlordMetrics = [
     { icon: Building, label: "Total Properties", value: "12" },
@@ -106,7 +107,7 @@ export default function LandlordDashboard() {
                 <p className="text-2xl font-bold">{metric.value}</p>
               </div>
               <div className="p-3 neumorph rounded-full">
-                <metric.icon className="h-6 w-6 text-primary" />
+                <metric.icon className="h-6 w-6 text-primary" color={iconColor} />
               </div>
             </div>
           </NeumorphicCard>
@@ -116,7 +117,7 @@ export default function LandlordDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <NeumorphicCard className="p-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
+            <Users className="h-5 w-5 text-primary" color={iconColor} />
             Recent Applications
           </h2>
           
@@ -143,7 +144,7 @@ export default function LandlordDashboard() {
 
         <NeumorphicCard className="p-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
+            <MessageSquare className="h-5 w-5 text-primary" color={iconColor} />
             Recent Messages
           </h2>
           

@@ -1,9 +1,11 @@
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { Moon, Sun } from "lucide-react";
+import { useIconColor } from "@/hooks/use-icon-color";
 
 export function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
+  const iconColor = useIconColor();
 
   return (
     <button
@@ -12,9 +14,9 @@ export function ThemeToggle() {
       aria-label="Toggle theme"
     >
       {isDarkMode ? (
-        <Moon className="h-5 w-5 text-foreground" />
+        <Moon className="h-5 w-5" color={iconColor} />
       ) : (
-        <Sun className="h-5 w-5 text-foreground" />
+        <Sun className="h-5 w-5" color={iconColor} />
       )}
     </button>
   );

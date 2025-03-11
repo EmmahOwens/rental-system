@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +5,7 @@ import { House, LogOut, User } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useIconColor } from "@/hooks/use-icon-color";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ export function NavigationBar() {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const isMobile = useIsMobile();
+  const iconColor = useIconColor();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -39,7 +40,6 @@ export function NavigationBar() {
     }
   };
 
-  // Format date without timezone dependency
   const formattedTime = format(
     currentTime,
     'MMM d, yyyy - h:mm a'
@@ -49,7 +49,7 @@ export function NavigationBar() {
     <header className="w-full p-3 md:p-4">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <House className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+          <House className="h-5 w-5 md:h-6 md:w-6 text-primary" color={iconColor} />
           <h1 className="text-lg md:text-xl font-semibold truncate">
             {isMobile ? "RMS" : "Rental Management System"}
           </h1>
@@ -79,11 +79,11 @@ export function NavigationBar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={() => navigate('/settings')}>
-                      <User className="mr-2 h-4 w-4" />
+                      <User className="mr-2 h-4 w-4" color={iconColor} />
                       <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className="mr-2 h-4 w-4" color={iconColor} />
                       <span>Logout</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -97,7 +97,7 @@ export function NavigationBar() {
                     onClick={handleLogout}
                     className="neumorph-button flex items-center gap-2"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-4 w-4" color={iconColor} />
                     Logout
                   </button>
                 </div>
