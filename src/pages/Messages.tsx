@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +23,6 @@ type Message = {
   read: boolean;
   receiver_id: string;
   sender_id: string;
-  // Add the profile information for join queries
   profiles_sender?: Profile;
   profiles_receiver?: Profile;
 };
@@ -39,13 +37,11 @@ export default function Messages() {
   const [chatPartner, setChatPartner] = useState<Profile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Find the chat partner based on current user role
   useEffect(() => {
     const fetchChatPartner = async () => {
       if (!currentUser?.id) return;
       
       try {
-        // If current user is tenant, find a landlord, and vice versa
         const targetRole = currentUser.role === 'tenant' ? 'landlord' : 'tenant';
         
         const { data, error } = await supabase
@@ -78,7 +74,6 @@ export default function Messages() {
     fetchChatPartner();
   }, [currentUser, toast]);
 
-  // Fetch messages between current user and chat partner
   useEffect(() => {
     const fetchMessages = async () => {
       if (!currentUser?.id || !chatPartner?.id) return;
@@ -112,7 +107,6 @@ export default function Messages() {
 
     fetchMessages();
     
-    // Set up realtime subscription for new messages
     if (currentUser?.id && chatPartner?.id) {
       const channel = supabase
         .channel('messages-changes')
@@ -122,10 +116,9 @@ export default function Messages() {
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: `or(and(receiver_id=eq.${currentUser.id},sender_id=eq.${chatPartner.id}),and(receiver_id=eq.${chatPartner.id},sender_id=eq.${currentUser.id}))`
+            filter: `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`
           },
           (payload) => {
-            // Fetch the complete message with profiles
             const fetchNewMessage = async () => {
               const { data, error } = await supabase
                 .from("messages")
@@ -154,7 +147,6 @@ export default function Messages() {
     }
   }, [currentUser?.id, chatPartner?.id, toast]);
   
-  // Scroll to bottom of messages when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -163,7 +155,6 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Send a new message
   const sendMessage = async () => {
     if (!messageContent.trim() || !currentUser?.id || !chatPartner?.id) return;
     
@@ -195,12 +186,10 @@ export default function Messages() {
     }
   };
 
-  // Mark messages as read
   useEffect(() => {
     const markMessagesAsRead = async () => {
       if (!currentUser?.id || messages.length === 0) return;
       
-      // Get IDs of unread messages sent to current user
       const unreadMessageIds = messages
         .filter(msg => msg.receiver_id === currentUser.id && !msg.read)
         .map(msg => msg.id);
