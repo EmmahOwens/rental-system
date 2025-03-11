@@ -9,38 +9,38 @@ import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-// Define profile type without circular references
+// Define profile type with primitive properties only
 type Profile = {
   id: string;
-  first_name?: string;
-  last_name?: string;
-  avatar_url?: string;
-  role?: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  avatar_url?: string | null;
+  role?: string | null;
 };
 
-// Define message type with explicit profile properties
+// Define message type with explicit properties (no nested Profile references)
 type Message = {
   id: string;
   content: string;
   created_at: string;
-  read: boolean;
+  read: boolean | null;
   receiver_id: string;
   sender_id: string;
-  // Use simple object shapes instead of Profile type to avoid circular references
+  // Use flat object structures instead of Profile references
   profiles_sender?: {
     id: string;
-    first_name?: string;
-    last_name?: string;
-    avatar_url?: string;
-    role?: string;
-  };
+    first_name?: string | null;
+    last_name?: string | null;
+    avatar_url?: string | null;
+    role?: string | null;
+  } | null;
   profiles_receiver?: {
     id: string;
-    first_name?: string;
-    last_name?: string;
-    avatar_url?: string;
-    role?: string;
-  };
+    first_name?: string | null;
+    last_name?: string | null;
+    avatar_url?: string | null;
+    role?: string | null;
+  } | null;
 };
 
 export default function Messages() {
@@ -124,7 +124,7 @@ export default function Messages() {
     fetchMessages();
     
     if (currentUser?.id && chatPartner?.id) {
-      // Fix the filter syntax for the realtime subscription
+      // Create a filter for the realtime subscription
       const filter = `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`;
       
       const channel = supabase
