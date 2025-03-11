@@ -36,7 +36,12 @@ export default function VerifyEmail() {
       console.log("User already verified, redirecting to dashboard");
       navigate("/dashboard", { replace: true });
     }
-  }, [email, navigate, currentUser]);
+
+    // Auto-fill OTP if provided in state
+    if (receivedOtp && !otp) {
+      setOtp(receivedOtp);
+    }
+  }, [email, navigate, currentUser, receivedOtp, otp]);
 
   useEffect(() => {
     // Countdown timer for OTP resend
@@ -101,8 +106,9 @@ export default function VerifyEmail() {
         title: "OTP resent",
         description: "A new verification code has been sent to your email",
       });
-      // Update the displayed OTP
+      // Update the displayed OTP and auto-fill the input
       navigate(".", { state: { email, otp: newOtp }, replace: true });
+      setOtp(newOtp);
     } catch (error: any) {
       toast({
         title: "Failed to resend OTP",
