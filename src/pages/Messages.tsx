@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
+// Define profile type without circular references
 type Profile = {
   id: string;
   first_name?: string;
@@ -16,6 +18,7 @@ type Profile = {
   role?: string;
 };
 
+// Define message type with explicit profile properties
 type Message = {
   id: string;
   content: string;
@@ -23,6 +26,7 @@ type Message = {
   read: boolean;
   receiver_id: string;
   sender_id: string;
+  // Use simple object shapes instead of Profile type to avoid circular references
   profiles_sender?: {
     id: string;
     first_name?: string;
@@ -120,6 +124,9 @@ export default function Messages() {
     fetchMessages();
     
     if (currentUser?.id && chatPartner?.id) {
+      // Fix the filter syntax for the realtime subscription
+      const filter = `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`;
+      
       const channel = supabase
         .channel('messages-changes')
         .on(
@@ -128,7 +135,7 @@ export default function Messages() {
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`
+            filter: filter
           },
           (payload) => {
             const fetchNewMessage = async () => {
