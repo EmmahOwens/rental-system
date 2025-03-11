@@ -9,16 +9,18 @@ import { Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Define profile type with primitive properties only
 type Profile = {
   id: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  avatar_url?: string | null;
-  role?: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  user_type: string | null;
+  user_id: string;
+  phone: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
-// Flattened message type without nested references
 type Message = {
   id: string;
   content: string;
@@ -26,18 +28,14 @@ type Message = {
   read: boolean | null;
   receiver_id: string;
   sender_id: string;
-  // Flat properties for sender
-  sender_id_str?: string | null;
   sender_first_name?: string | null;
   sender_last_name?: string | null;
   sender_avatar_url?: string | null;
-  sender_role?: string | null;
-  // Flat properties for receiver
-  receiver_id_str?: string | null;
+  sender_user_type?: string | null;
   receiver_first_name?: string | null;
   receiver_last_name?: string | null;
   receiver_avatar_url?: string | null;
-  receiver_role?: string | null;
+  receiver_user_type?: string | null;
 };
 
 export default function Messages() {
@@ -56,12 +54,12 @@ export default function Messages() {
       if (!currentUser?.id) return;
       
       try {
-        const targetRole = currentUser.role === 'tenant' ? 'landlord' : 'tenant';
+        const targetUserType = currentUser.role === 'tenant' ? 'landlord' : 'tenant';
         
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
-          .eq("role", targetRole)
+          .eq("user_type", targetUserType)
           .limit(1);
           
         if (error) throw error;
@@ -71,7 +69,7 @@ export default function Messages() {
         } else {
           toast({
             title: "No chat partner found",
-            description: `No ${targetRole} found to chat with`,
+            description: `No ${targetUserType} found to chat with`,
             variant: "destructive",
           });
         }
@@ -113,16 +111,14 @@ export default function Messages() {
           read: msg.read,
           receiver_id: msg.receiver_id,
           sender_id: msg.sender_id,
-          sender_id_str: msg.profiles_sender?.id || null,
           sender_first_name: msg.profiles_sender?.first_name || null,
           sender_last_name: msg.profiles_sender?.last_name || null,
           sender_avatar_url: msg.profiles_sender?.avatar_url || null,
-          sender_role: msg.profiles_sender?.role || null,
-          receiver_id_str: msg.profiles_receiver?.id || null,
+          sender_user_type: msg.profiles_sender?.user_type || null,
           receiver_first_name: msg.profiles_receiver?.first_name || null,
           receiver_last_name: msg.profiles_receiver?.last_name || null,
           receiver_avatar_url: msg.profiles_receiver?.avatar_url || null,
-          receiver_role: msg.profiles_receiver?.role || null,
+          receiver_user_type: msg.profiles_receiver?.user_type || null,
         })) || [];
 
         setMessages(transformedMessages);
@@ -173,16 +169,14 @@ export default function Messages() {
                   read: data.read,
                   receiver_id: data.receiver_id,
                   sender_id: data.sender_id,
-                  sender_id_str: data.profiles_sender?.id || null,
                   sender_first_name: data.profiles_sender?.first_name || null,
                   sender_last_name: data.profiles_sender?.last_name || null,
                   sender_avatar_url: data.profiles_sender?.avatar_url || null,
-                  sender_role: data.profiles_sender?.role || null,
-                  receiver_id_str: data.profiles_receiver?.id || null,
+                  sender_user_type: data.profiles_sender?.user_type || null,
                   receiver_first_name: data.profiles_receiver?.first_name || null,
                   receiver_last_name: data.profiles_receiver?.last_name || null,
                   receiver_avatar_url: data.profiles_receiver?.avatar_url || null,
-                  receiver_role: data.profiles_receiver?.role || null,
+                  receiver_user_type: data.profiles_receiver?.user_type || null,
                 };
                 
                 setMessages(prev => [...prev, newMessage]);
@@ -200,10 +194,6 @@ export default function Messages() {
       };
     }
   }, [currentUser?.id, chatPartner?.id, toast]);
-  
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -295,16 +285,16 @@ export default function Messages() {
         <Avatar className="h-8 w-8 md:h-10 md:w-10 mr-2 md:mr-3">
           <AvatarImage src={chatPartner.avatar_url || `/placeholder.svg`} />
           <AvatarFallback>
-            {chatPartner.first_name?.charAt(0) || chatPartner.role?.charAt(0) || '?'}
+            {chatPartner.first_name?.charAt(0) || chatPartner.user_type?.charAt(0) || '?'}
           </AvatarFallback>
         </Avatar>
         <div>
           <h1 className="text-base md:text-lg font-semibold">
             {chatPartner.first_name && chatPartner.last_name 
               ? `${chatPartner.first_name} ${chatPartner.last_name}` 
-              : `${chatPartner.role?.charAt(0).toUpperCase()}${chatPartner.role?.slice(1) || 'User'}`}
+              : `${chatPartner.user_type?.charAt(0).toUpperCase()}${chatPartner.user_type?.slice(1) || 'User'}`}
           </h1>
-          <p className="text-xs md:text-sm text-muted-foreground capitalize">{chatPartner.role || 'User'}</p>
+          <p className="text-xs md:text-sm text-muted-foreground capitalize">{chatPartner.user_type || 'User'}</p>
         </div>
       </div>
       

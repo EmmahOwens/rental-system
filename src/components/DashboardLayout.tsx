@@ -16,8 +16,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <NavigationBar />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar />
-        <main className={`flex-1 p-3 md:p-6 overflow-y-auto ${isMobile ? 'pt-14' : ''}`}>
-          {children}
+        <main className={`flex-1 p-2 md:p-6 overflow-y-auto ${isMobile ? 'pt-14' : ''}`}>
+          <div className="max-w-6xl mx-auto w-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>
