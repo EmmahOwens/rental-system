@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Define profile type with primitive properties only
 type Profile = {
@@ -17,7 +18,7 @@ type Profile = {
   role?: string | null;
 };
 
-// Using a type with inline properties instead of nested references
+// Flattened message type without nested references
 type Message = {
   id: string;
   content: string;
@@ -25,21 +26,18 @@ type Message = {
   read: boolean | null;
   receiver_id: string;
   sender_id: string;
-  // Use primitive properties instead of references to avoid circular dependency
-  profiles_sender?: {
-    id: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    avatar_url?: string | null;
-    role?: string | null;
-  } | null;
-  profiles_receiver?: {
-    id: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    avatar_url?: string | null;
-    role?: string | null;
-  } | null;
+  // Flat properties for sender
+  sender_id_str?: string | null;
+  sender_first_name?: string | null;
+  sender_last_name?: string | null;
+  sender_avatar_url?: string | null;
+  sender_role?: string | null;
+  // Flat properties for receiver
+  receiver_id_str?: string | null;
+  receiver_first_name?: string | null;
+  receiver_last_name?: string | null;
+  receiver_avatar_url?: string | null;
+  receiver_role?: string | null;
 };
 
 export default function Messages() {
@@ -51,6 +49,7 @@ export default function Messages() {
   const [messageContent, setMessageContent] = useState("");
   const [chatPartner, setChatPartner] = useState<Profile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchChatPartner = async () => {
@@ -107,7 +106,26 @@ export default function Messages() {
 
         if (error) throw error;
 
-        setMessages(data || []);
+        const transformedMessages = data?.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          created_at: msg.created_at,
+          read: msg.read,
+          receiver_id: msg.receiver_id,
+          sender_id: msg.sender_id,
+          sender_id_str: msg.profiles_sender?.id || null,
+          sender_first_name: msg.profiles_sender?.first_name || null,
+          sender_last_name: msg.profiles_sender?.last_name || null,
+          sender_avatar_url: msg.profiles_sender?.avatar_url || null,
+          sender_role: msg.profiles_sender?.role || null,
+          receiver_id_str: msg.profiles_receiver?.id || null,
+          receiver_first_name: msg.profiles_receiver?.first_name || null,
+          receiver_last_name: msg.profiles_receiver?.last_name || null,
+          receiver_avatar_url: msg.profiles_receiver?.avatar_url || null,
+          receiver_role: msg.profiles_receiver?.role || null,
+        })) || [];
+
+        setMessages(transformedMessages);
       } catch (error) {
         console.error("Error fetching messages:", error);
         toast({
@@ -123,7 +141,6 @@ export default function Messages() {
     fetchMessages();
     
     if (currentUser?.id && chatPartner?.id) {
-      // Create a filter for the realtime subscription
       const filter = `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`;
       
       const channel = supabase
@@ -149,7 +166,26 @@ export default function Messages() {
                 .single();
                 
               if (!error && data) {
-                setMessages(prev => [...prev, data]);
+                const newMessage = {
+                  id: data.id,
+                  content: data.content,
+                  created_at: data.created_at,
+                  read: data.read,
+                  receiver_id: data.receiver_id,
+                  sender_id: data.sender_id,
+                  sender_id_str: data.profiles_sender?.id || null,
+                  sender_first_name: data.profiles_sender?.first_name || null,
+                  sender_last_name: data.profiles_sender?.last_name || null,
+                  sender_avatar_url: data.profiles_sender?.avatar_url || null,
+                  sender_role: data.profiles_sender?.role || null,
+                  receiver_id_str: data.profiles_receiver?.id || null,
+                  receiver_first_name: data.profiles_receiver?.first_name || null,
+                  receiver_last_name: data.profiles_receiver?.last_name || null,
+                  receiver_avatar_url: data.profiles_receiver?.avatar_url || null,
+                  receiver_role: data.profiles_receiver?.role || null,
+                };
+                
+                setMessages(prev => [...prev, newMessage]);
                 scrollToBottom();
               }
             };
@@ -254,29 +290,29 @@ export default function Messages() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)]">
-      <div className="flex items-center p-4 border-b">
-        <Avatar className="h-10 w-10 mr-3">
+    <div className="flex flex-col h-[calc(100vh-200px)] md:h-[calc(100vh-150px)]">
+      <div className="flex items-center p-3 md:p-4 border-b">
+        <Avatar className="h-8 w-8 md:h-10 md:w-10 mr-2 md:mr-3">
           <AvatarImage src={chatPartner.avatar_url || `/placeholder.svg`} />
           <AvatarFallback>
             {chatPartner.first_name?.charAt(0) || chatPartner.role?.charAt(0) || '?'}
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-lg font-semibold">
+          <h1 className="text-base md:text-lg font-semibold">
             {chatPartner.first_name && chatPartner.last_name 
               ? `${chatPartner.first_name} ${chatPartner.last_name}` 
               : `${chatPartner.role?.charAt(0).toUpperCase()}${chatPartner.role?.slice(1) || 'User'}`}
           </h1>
-          <p className="text-sm text-muted-foreground capitalize">{chatPartner.role || 'User'}</p>
+          <p className="text-xs md:text-sm text-muted-foreground capitalize">{chatPartner.role || 'User'}</p>
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <p className="text-muted-foreground">No messages yet</p>
-            <p className="text-sm">Start the conversation by sending a message</p>
+            <p className="text-xs md:text-sm">Start the conversation by sending a message</p>
           </div>
         ) : (
           messages.map((message) => {
@@ -287,9 +323,9 @@ export default function Messages() {
                 key={message.id} 
                 className={`flex ${isCurrentUserSender ? 'justify-end' : 'justify-start'}`}
               >
-                <Card className={`max-w-[80%] p-3 ${isCurrentUserSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                  <p>{message.content}</p>
-                  <p className={`text-xs mt-1 ${isCurrentUserSender ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                <Card className={`max-w-[90%] md:max-w-[80%] p-2 md:p-3 text-sm md:text-base ${isCurrentUserSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  <p className="break-words">{message.content}</p>
+                  <p className={`text-[10px] md:text-xs mt-1 ${isCurrentUserSender ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                     {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     {isCurrentUserSender && message.read && ' • Read'}
                   </p>
@@ -301,7 +337,7 @@ export default function Messages() {
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="p-4 border-t">
+      <div className="p-3 md:p-4 border-t">
         <form 
           onSubmit={(e) => {
             e.preventDefault();
@@ -315,12 +351,13 @@ export default function Messages() {
             onKeyDown={handleKeyPress}
             placeholder="Type a message..."
             disabled={sendingMessage}
-            className="flex-1"
+            className="flex-1 text-sm md:text-base h-9 md:h-10"
           />
           <Button 
             type="submit" 
             disabled={!messageContent.trim() || sendingMessage}
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
+            className="h-9 md:h-10"
           >
             {sendingMessage ? (
               <Loader2 className="h-4 w-4 animate-spin" />

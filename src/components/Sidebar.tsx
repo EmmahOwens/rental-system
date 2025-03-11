@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useMediaQuery } from "@/hooks/use-mobile";
@@ -26,14 +27,16 @@ interface SidebarItemProps {
   label: string;
   to: string;
   collapsed: boolean;
+  onClick?: () => void;
 }
 
-function SidebarItem({ icon: Icon, label, to, collapsed }: SidebarItemProps) {
+function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemProps) {
   const { isDarkMode } = useTheme();
   
   return (
     <NavLink
       to={to}
+      onClick={onClick}
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
@@ -81,6 +84,12 @@ export function Sidebar() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const closeSidebar = () => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
+
   // Removed Documents tab from both tenant and landlord links
   const tenantLinks = [
     { icon: Home, label: "Dashboard", to: "/dashboard" },
@@ -112,49 +121,61 @@ export function Sidebar() {
       <>
         <button 
           onClick={toggleSidebar}
-          className="fixed z-20 top-20 left-4 neumorph p-2 rounded-full"
+          className="fixed z-20 top-16 left-4 neumorph p-2 rounded-full shadow-lg"
+          aria-label="Open menu"
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-5 w-5" />
         </button>
       </>
     );
   }
 
   return (
-    <aside 
-      className={cn(
-        "transition-all duration-300 ease-in-out h-[calc(100vh-4rem)] overflow-y-auto",
-        collapsed ? "w-16" : "w-64",
-        isMobile ? "fixed z-10 bg-background" : "border-r border-border",
-        !sidebarOpen && isMobile ? "-translate-x-full" : "translate-x-0"
+    <>
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-10"
+          onClick={toggleSidebar}
+          aria-hidden="true"
+        />
       )}
-    >
-      <div className="flex flex-col gap-2 p-4">
-        <div className="flex justify-end mb-2">
-          <button 
-            onClick={isMobile ? toggleSidebar : toggleCollapse}
-            className="neumorph p-2 rounded-full"
-          >
-            {isMobile ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </button>
+      <aside 
+        className={cn(
+          "transition-all duration-300 ease-in-out h-[calc(100vh-4rem)] overflow-y-auto",
+          collapsed ? "w-16" : "w-64",
+          isMobile ? "fixed z-20 bg-background shadow-xl" : "border-r border-border",
+          !sidebarOpen && isMobile ? "-translate-x-full" : "translate-x-0"
+        )}
+      >
+        <div className="flex flex-col gap-2 p-4">
+          <div className="flex justify-end mb-2">
+            <button 
+              onClick={isMobile ? toggleSidebar : toggleCollapse}
+              className="neumorph p-2 rounded-full"
+              aria-label={isMobile ? "Close sidebar" : (collapsed ? "Expand sidebar" : "Collapse sidebar")}
+            >
+              {isMobile ? (
+                <X className="h-4 w-4" />
+              ) : collapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+          
+          {links.map((link) => (
+            <SidebarItem
+              key={link.to}
+              icon={link.icon}
+              label={link.label}
+              to={link.to}
+              collapsed={collapsed}
+              onClick={closeSidebar}
+            />
+          ))}
         </div>
-        
-        {links.map((link) => (
-          <SidebarItem
-            key={link.to}
-            icon={link.icon}
-            label={link.label}
-            to={link.to}
-            collapsed={collapsed}
-          />
-        ))}
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
