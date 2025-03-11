@@ -23,8 +23,20 @@ type Message = {
   read: boolean;
   receiver_id: string;
   sender_id: string;
-  profiles_sender?: Profile;
-  profiles_receiver?: Profile;
+  profiles_sender?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    avatar_url?: string;
+    role?: string;
+  };
+  profiles_receiver?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    avatar_url?: string;
+    role?: string;
+  };
 };
 
 export default function Messages() {
