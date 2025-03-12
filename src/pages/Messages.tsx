@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -99,13 +98,23 @@ export default function Messages() {
       try {
         setLoading(true);
         
-        // Use a more efficient query with better performance
+        // Fixed query structure to avoid ambiguous table references
         const { data, error } = await supabase
           .from("messages")
           .select(`
-            id, content, created_at, read, receiver_id, sender_id,
-            profiles!sender_id (first_name, last_name, avatar_url, user_type),
-            profiles!receiver_id (first_name, last_name, avatar_url, user_type)
+            *,
+            sender:profiles!messages_sender_id_fkey(
+              first_name,
+              last_name,
+              avatar_url,
+              user_type
+            ),
+            receiver:profiles!messages_receiver_id_fkey(
+              first_name,
+              last_name,
+              avatar_url,
+              user_type
+            )
           `)
           .or(`and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id})`)
           .order('created_at', { ascending: true });
@@ -120,14 +129,14 @@ export default function Messages() {
             read: msg.read,
             receiver_id: msg.receiver_id,
             sender_id: msg.sender_id,
-            sender_first_name: msg.profiles?.first_name || null,
-            sender_last_name: msg.profiles?.last_name || null,
-            sender_avatar_url: msg.profiles?.avatar_url || null,
-            sender_user_type: msg.profiles?.user_type || null,
-            receiver_first_name: msg.profiles?.first_name || null,
-            receiver_last_name: msg.profiles?.last_name || null,
-            receiver_avatar_url: msg.profiles?.avatar_url || null,
-            receiver_user_type: msg.profiles?.user_type || null,
+            sender_first_name: msg.sender?.first_name || null,
+            sender_last_name: msg.sender?.last_name || null,
+            sender_avatar_url: msg.sender?.avatar_url || null,
+            sender_user_type: msg.sender?.user_type || null,
+            receiver_first_name: msg.receiver?.first_name || null,
+            receiver_last_name: msg.receiver?.last_name || null,
+            receiver_avatar_url: msg.receiver?.avatar_url || null,
+            receiver_user_type: msg.receiver?.user_type || null,
           }));
 
           setMessages(transformedMessages);
@@ -148,17 +157,15 @@ export default function Messages() {
         }
       }
     };
-    
+
     fetchMessages();
     
     // Set up realtime subscription
     if (currentUser?.id && chatPartner?.id) {
-      // Clean up any existing subscription
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
       }
       
-      // Create new subscription for real-time updates
       const channel = supabase
         .channel('messages-changes')
         .on(
@@ -179,9 +186,19 @@ export default function Messages() {
               const { data, error } = await supabase
                 .from("messages")
                 .select(`
-                  id, content, created_at, read, receiver_id, sender_id,
-                  profiles!sender_id (first_name, last_name, avatar_url, user_type),
-                  profiles!receiver_id (first_name, last_name, avatar_url, user_type)
+                  *,
+                  sender:profiles!messages_sender_id_fkey(
+                    first_name,
+                    last_name,
+                    avatar_url,
+                    user_type
+                  ),
+                  receiver:profiles!messages_receiver_id_fkey(
+                    first_name,
+                    last_name,
+                    avatar_url,
+                    user_type
+                  )
                 `)
                 .eq('id', payload.new.id)
                 .single();
@@ -196,19 +213,18 @@ export default function Messages() {
                   read: data.read,
                   receiver_id: data.receiver_id,
                   sender_id: data.sender_id,
-                  sender_first_name: data.profiles?.first_name || null,
-                  sender_last_name: data.profiles?.last_name || null,
-                  sender_avatar_url: data.profiles?.avatar_url || null,
-                  sender_user_type: data.profiles?.user_type || null,
-                  receiver_first_name: data.profiles?.first_name || null,
-                  receiver_last_name: data.profiles?.last_name || null,
-                  receiver_avatar_url: data.profiles?.avatar_url || null,
-                  receiver_user_type: data.profiles?.user_type || null,
+                  sender_first_name: data.sender?.first_name || null,
+                  sender_last_name: data.sender?.last_name || null,
+                  sender_avatar_url: data.sender?.avatar_url || null,
+                  sender_user_type: data.sender?.user_type || null,
+                  receiver_first_name: data.receiver?.first_name || null,
+                  receiver_last_name: data.receiver?.last_name || null,
+                  receiver_avatar_url: data.receiver?.avatar_url || null,
+                  receiver_user_type: data.receiver?.user_type || null,
                 };
                 
                 setMessages(prev => [...prev, newMessage]);
                 
-                // Auto-mark as read if current user is the receiver
                 if (data.receiver_id === currentUser.id && !data.read) {
                   await supabase
                     .from("messages")
@@ -225,14 +241,11 @@ export default function Messages() {
         )
         .subscribe();
       
-      // Store channel reference for cleanup
       realtimeChannelRef.current = channel;
     }
     
     return () => {
       isMounted = false;
-      
-      // Clean up realtime subscription
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
       }
