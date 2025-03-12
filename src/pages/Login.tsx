@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { House, Loader2 } from "lucide-react";
+import { House, Loader2, ArrowLeft } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -34,6 +34,11 @@ export default function Login() {
       
       // Redirect to dashboard - the RoleBasedDashboard component will handle the proper redirection
       navigate("/dashboard", { replace: true });
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -46,6 +51,11 @@ export default function Login() {
     }
   };
 
+  // Go back to home page
+  const handleBackToHome = () => {
+    navigate("/");
+  };
+
   // Show loading state if auth is loading
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -53,6 +63,16 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="absolute top-4 left-4">
+        <button 
+          onClick={handleBackToHome}
+          className="flex items-center gap-2 p-2 rounded-full hover:bg-background/50 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="hidden sm:inline">Back to Home</span>
+        </button>
+      </div>
+      
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -122,12 +142,12 @@ export default function Login() {
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <a
-                href="/signup"
+              <button
+                onClick={() => navigate("/signup")}
                 className="text-primary font-medium hover:underline"
               >
                 Sign up
-              </a>
+              </button>
             </p>
           </div>
         </NeumorphicCard>

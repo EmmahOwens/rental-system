@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -95,6 +94,17 @@ export default function Index() {
         ease: "easeOut" 
       } 
     })
+  };
+
+  // Handle navigation to login/signup pages
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/login");
+  };
+
+  const handleSignupClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/signup");
   };
 
   const testimonials = [
@@ -211,13 +221,13 @@ export default function Index() {
           
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => navigate("/login")}
+              onClick={handleLoginClick}
               className="neumorph-button text-sm"
             >
               Login
             </button>
             <button 
-              onClick={() => navigate("/signup")}
+              onClick={handleSignupClick}
               className="neumorph-button bg-primary text-primary-foreground text-sm"
             >
               Sign Up

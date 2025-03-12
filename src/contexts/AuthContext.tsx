@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,15 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentOTP, setCurrentOTP] = useState<string>("");
 
   useEffect(() => {
-    // Check for logged in user in Supabase
     const checkUser = async () => {
       setIsLoading(true);
       
-      // Get session from Supabase
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (session) {
-        // Get user metadata for role
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
@@ -78,7 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     checkUser();
     
-    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session);
       if (event === 'SIGNED_IN' && session) {
@@ -112,82 +107,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Login function using Supabase
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      console.log("Login successful:", data);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error(error.message);
     }
-    
-    // User data is handled by the auth state listener
-    setIsLoading(false);
   };
 
-  // Signup function using Supabase
   const signup = async (email: string, name: string, password: string, role: UserRole, adminCode?: string) => {
     setIsLoading(true);
     
-    // If role is landlord, check admin code
-    if (role === 'landlord') {
-      if (adminCode !== 'Admin256') {
-        setIsLoading(false);
-        throw new Error('Invalid admin registration code');
+    try {
+      if (role === 'landlord') {
+        if (adminCode !== 'Admin256') {
+          throw new Error('Invalid admin registration code');
+        }
       }
-    }
-    
-    // Create user in Supabase
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          role,
-        },
-        emailRedirectTo: `${window.location.origin}/dashboard`
-      }
-    });
-    
-    if (error) {
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      console.log("User signed up:", data);
+      console.log("User role during signup:", role);
+      
+      const userForVerification = {
+        email,
+        name,
+        role,
+        password
+      };
+      setPendingVerificationUser(userForVerification);
+      
+      const otp = await sendVerificationEmail(email);
+      return email;
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error(error.message);
     }
-    
-    console.log("User signed up:", data);
-    console.log("User role during signup:", role);
-    
-    // Store temporary data for verification, including role
-    const userForVerification = {
-      email,
-      name,
-      role,
-      password // Store password temporarily for verification
-    };
-    setPendingVerificationUser(userForVerification);
-    
-    setIsLoading(false);
-    
-    // Send verification OTP
-    const otp = await sendVerificationEmail(email);
-    return email;
   };
 
-  // Send verification email with OTP
   const sendVerificationEmail = async (email: string) => {
-    // Generate an OTP
     const otp = generateOTP();
     setCurrentOTP(otp);
     
-    // In a production environment, we would send an email here using Supabase Edge Functions
     try {
-      // Attempt to send a real email notification via Supabase
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/verify-email`,
       });
@@ -198,29 +187,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return otp;
     } catch (emailError) {
       console.error("Error sending real email:", emailError);
-      // Fallback to console.log OTP for development
       console.log(`Verification OTP for ${email}: ${otp}`);
       return otp;
     }
   };
 
-  // Verify email with OTP
   const verifyEmail = async (otp: string) => {
     setIsLoading(true);
     
-    // Check OTP
     if (otp !== currentOTP) {
       setIsLoading(false);
       throw new Error('Invalid OTP');
     }
     
-    // In a production environment, we would update verification status in Supabase
     if (pendingVerificationUser) {
       const { email, password, role, name } = pendingVerificationUser;
       
       console.log("Verifying user with role:", role);
       
-      // Automatically sign in the user after verification
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -234,7 +218,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log("Successfully signed in after verification:", data);
       
-      // Update user metadata to mark as verified
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           name,
@@ -253,17 +236,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentOTP("");
       
       setIsLoading(false);
-      console.log("Returning role for redirection:", role);
-      return role; // Return the role for redirection
+      return role;
     }
     
     setIsLoading(false);
     throw new Error('No pending verification user');
   };
-  
-  // Reset password function
+
   const resetPassword = async (email: string) => {
-    // Use the current app URL instead of hardcoded URLs
     const redirectTo = `${window.location.origin}/reset-password`;
     console.log("Reset password redirect URL:", redirectTo);
     
@@ -276,7 +256,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Logout function using Supabase
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -293,7 +272,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Update user profile function
   const updateUserProfile = async (userData: Partial<User>) => {
     if (!currentUser) {
       throw new Error('No authenticated user');
@@ -302,7 +280,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
-      // Update user metadata in Supabase
       const { error } = await supabase.auth.updateUser({
         data: {
           ...userData
@@ -313,7 +290,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(error.message);
       }
       
-      // Update local user state
       setCurrentUser({
         ...currentUser,
         ...userData
