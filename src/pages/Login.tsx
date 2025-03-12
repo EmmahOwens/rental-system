@@ -11,14 +11,13 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, currentUser, isLoading } = useAuth();
+  const { login, currentUser, isLoading, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Redirect if already logged in
   useEffect(() => {
     if (currentUser && !isLoading) {
-      console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard", { replace: true });
     }
   }, [currentUser, isLoading, navigate]);
@@ -28,19 +27,15 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      console.log("Attempting login with email:", email);
       await login(email, password);
-      console.log("Login successful, redirecting to dashboard");
-      
-      // Redirect to dashboard - the RoleBasedDashboard component will handle the proper redirection
-      navigate("/dashboard", { replace: true });
       
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
+      
+      // Navigation will be handled by the useEffect above
     } catch (error: any) {
-      console.error("Login error:", error);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again",
@@ -54,6 +49,32 @@ export default function Login() {
   // Go back to home page
   const handleBackToHome = () => {
     navigate("/");
+  };
+  
+  // Handle forgot password
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await resetPassword(email);
+      toast({
+        title: "Password reset email sent",
+        description: "Please check your email for instructions to reset your password",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to send reset email",
+        description: error.message || "An error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Show loading state if auth is loading
@@ -108,9 +129,13 @@ export default function Login() {
                 <label htmlFor="password" className="block text-sm font-medium">
                   Password
                 </label>
-                <a href="#" className="text-sm text-primary hover:underline">
+                <button 
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm text-primary hover:underline"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
               <input
                 id="password"
