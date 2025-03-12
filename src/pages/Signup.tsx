@@ -23,6 +23,7 @@ export default function Signup() {
   const handleRoleChange = (selectedRole: 'tenant' | 'landlord') => {
     setRole(selectedRole);
     setShowAdminCode(selectedRole === 'landlord');
+    console.log("Role changed to:", selectedRole);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,6 +39,7 @@ export default function Signup() {
     }
     
     setIsSubmitting(true);
+    console.log("Submitting with role:", role);
 
     try {
       await signup(email, name, password, role, role === 'landlord' ? adminCode : undefined);

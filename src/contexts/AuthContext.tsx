@@ -161,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     console.log("User signed up:", data);
+    console.log("User role during signup:", role);
     
     // Store temporary data for verification, including role
     const userForVerification = {
@@ -244,6 +245,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (updateError) {
         console.error("Error updating user verification status:", updateError);
+      } else {
+        console.log("Successfully updated user metadata with role:", role);
       }
       
       setPendingVerificationUser(null);
