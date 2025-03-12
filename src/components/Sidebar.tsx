@@ -47,7 +47,8 @@ function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemP
       }
     >
       <Icon 
-        className="h-5 w-5"
+        size={20}
+        className="shrink-0"
         color={iconColor}
       />
       {!collapsed && <span>{label}</span>}
@@ -111,66 +112,64 @@ export function Sidebar() {
 
   const links = role === 'landlord' ? landlordLinks : tenantLinks;
 
-  if (isMobile && !sidebarOpen) {
-    return (
-      <>
+  return (
+    <>
+      {isMobile && !sidebarOpen ? (
         <button 
           onClick={toggleSidebar}
           className="fixed z-20 top-16 left-4 neumorph p-2 rounded-full shadow-lg"
           aria-label="Open menu"
         >
-          <Menu className="h-5 w-5" color={iconColor} />
+          <Menu size={20} color={iconColor} />
         </button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-10"
-          onClick={toggleSidebar}
-          aria-hidden="true"
-        />
-      )}
-      <aside 
-        className={cn(
-          "transition-all duration-300 ease-in-out h-[calc(100vh-4rem)] overflow-y-auto",
-          collapsed ? "w-16" : "w-64",
-          isMobile ? "fixed z-20 bg-background shadow-xl" : "border-r border-border",
-          !sidebarOpen && isMobile ? "-translate-x-full" : "translate-x-0"
-        )}
-      >
-        <div className="flex flex-col gap-2 p-4">
-          <div className="flex justify-end mb-2">
-            <button 
-              onClick={isMobile ? toggleSidebar : toggleCollapse}
-              className="neumorph p-2 rounded-full"
-              aria-label={isMobile ? "Close sidebar" : (collapsed ? "Expand sidebar" : "Collapse sidebar")}
-            >
-              {isMobile ? (
-                <X className="h-4 w-4" color={iconColor} />
-              ) : collapsed ? (
-                <ChevronRight className="h-4 w-4" color={iconColor} />
-              ) : (
-                <ChevronLeft className="h-4 w-4" color={iconColor} />
-              )}
-            </button>
-          </div>
-          
-          {links.map((link) => (
-            <SidebarItem
-              key={link.to}
-              icon={link.icon}
-              label={link.label}
-              to={link.to}
-              collapsed={collapsed}
-              onClick={closeSidebar}
+      ) : (
+        <>
+          {isMobile && sidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-10"
+              onClick={toggleSidebar}
+              aria-hidden="true"
             />
-          ))}
-        </div>
-      </aside>
+          )}
+          <aside 
+            className={cn(
+              "transition-all duration-300 ease-in-out h-[calc(100vh-4rem)] overflow-y-auto",
+              collapsed ? "w-16" : "w-64",
+              isMobile ? "fixed z-20 bg-background shadow-xl" : "border-r border-border",
+              !sidebarOpen && isMobile ? "-translate-x-full" : "translate-x-0"
+            )}
+          >
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex justify-end mb-2">
+                <button 
+                  onClick={isMobile ? toggleSidebar : toggleCollapse}
+                  className="neumorph p-2 rounded-full"
+                  aria-label={isMobile ? "Close sidebar" : (collapsed ? "Expand sidebar" : "Collapse sidebar")}
+                >
+                  {isMobile ? (
+                    <X size={20} color={iconColor} />
+                  ) : collapsed ? (
+                    <ChevronRight size={20} color={iconColor} />
+                  ) : (
+                    <ChevronLeft size={20} color={iconColor} />
+                  )}
+                </button>
+              </div>
+              
+              {links.map((link) => (
+                <SidebarItem
+                  key={link.to}
+                  icon={link.icon}
+                  label={link.label}
+                  to={link.to}
+                  collapsed={collapsed}
+                  onClick={closeSidebar}
+                />
+              ))}
+            </div>
+          </aside>
+        </>
+      )}
     </>
   );
 }
