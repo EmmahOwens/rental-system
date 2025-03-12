@@ -1,6 +1,7 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { 
   Home, 
   MessageSquare, 
@@ -30,7 +31,7 @@ interface SidebarItemProps {
   onClick?: () => void;
 }
 
-function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemProps) {
+const SidebarItem = memo(function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemProps) {
   const iconColor = useIconColor();
   
   return (
@@ -54,9 +55,9 @@ function SidebarItem({ icon: Icon, label, to, collapsed, onClick }: SidebarItemP
       {!collapsed && <span>{label}</span>}
     </NavLink>
   );
-}
+});
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const { currentUser } = useAuth();
   const role = currentUser?.role;
   const [collapsed, setCollapsed] = useState(false);
@@ -74,19 +75,19 @@ export function Sidebar() {
     }
   }, [isMobile]);
 
-  const toggleCollapse = () => {
-    setCollapsed(!collapsed);
-  };
+  const toggleCollapse = useCallback(() => {
+    setCollapsed(prev => !prev);
+  }, []);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
 
-  const closeSidebar = () => {
+  const closeSidebar = useCallback(() => {
     if (isMobile) {
       setSidebarOpen(false);
     }
-  };
+  }, [isMobile]);
 
   const tenantLinks = [
     { icon: Home, label: "Dashboard", to: "/dashboard" },
@@ -172,4 +173,4 @@ export function Sidebar() {
       )}
     </>
   );
-}
+});
