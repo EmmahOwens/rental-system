@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +49,9 @@ export default function Messages() {
   const [chatPartner, setChatPartner] = useState<Profile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const realtimeChannelRef = useRef<any>(null);
 
+  // Find a chat partner
   useEffect(() => {
     const fetchChatPartner = async () => {
       if (!currentUser?.id) return;
@@ -86,59 +89,76 @@ export default function Messages() {
     fetchChatPartner();
   }, [currentUser, toast]);
 
+  // Initial message fetch and realtime subscription
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchMessages = async () => {
       if (!currentUser?.id || !chatPartner?.id) return;
 
       try {
         setLoading(true);
+        
+        // Use a more efficient query with better performance
         const { data, error } = await supabase
           .from("messages")
           .select(`
-            *,
-            profiles_sender:profiles!sender_id(*),
-            profiles_receiver:profiles!receiver_id(*)
+            id, content, created_at, read, receiver_id, sender_id,
+            profiles!sender_id (first_name, last_name, avatar_url, user_type),
+            profiles!receiver_id (first_name, last_name, avatar_url, user_type)
           `)
           .or(`and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id})`)
           .order('created_at', { ascending: true });
 
         if (error) throw error;
 
-        const transformedMessages = data?.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          created_at: msg.created_at,
-          read: msg.read,
-          receiver_id: msg.receiver_id,
-          sender_id: msg.sender_id,
-          sender_first_name: msg.profiles_sender?.first_name || null,
-          sender_last_name: msg.profiles_sender?.last_name || null,
-          sender_avatar_url: msg.profiles_sender?.avatar_url || null,
-          sender_user_type: msg.profiles_sender?.user_type || null,
-          receiver_first_name: msg.profiles_receiver?.first_name || null,
-          receiver_last_name: msg.profiles_receiver?.last_name || null,
-          receiver_avatar_url: msg.profiles_receiver?.avatar_url || null,
-          receiver_user_type: msg.profiles_receiver?.user_type || null,
-        })) || [];
+        if (isMounted && data) {
+          const transformedMessages = data.map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            created_at: msg.created_at,
+            read: msg.read,
+            receiver_id: msg.receiver_id,
+            sender_id: msg.sender_id,
+            sender_first_name: msg.profiles?.first_name || null,
+            sender_last_name: msg.profiles?.last_name || null,
+            sender_avatar_url: msg.profiles?.avatar_url || null,
+            sender_user_type: msg.profiles?.user_type || null,
+            receiver_first_name: msg.profiles?.first_name || null,
+            receiver_last_name: msg.profiles?.last_name || null,
+            receiver_avatar_url: msg.profiles?.avatar_url || null,
+            receiver_user_type: msg.profiles?.user_type || null,
+          }));
 
-        setMessages(transformedMessages);
+          setMessages(transformedMessages);
+          setTimeout(scrollToBottom, 100);
+        }
       } catch (error) {
         console.error("Error fetching messages:", error);
-        toast({
-          title: "Failed to load messages",
-          description: "Please try again later",
-          variant: "destructive",
-        });
+        if (isMounted) {
+          toast({
+            title: "Failed to load messages",
+            description: "Please try again later",
+            variant: "destructive",
+          });
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-
+    
     fetchMessages();
     
+    // Set up realtime subscription
     if (currentUser?.id && chatPartner?.id) {
-      const filter = `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`;
+      // Clean up any existing subscription
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+      }
       
+      // Create new subscription for real-time updates
       const channel = supabase
         .channel('messages-changes')
         .on(
@@ -147,21 +167,28 @@ export default function Messages() {
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: filter
+            filter: `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`
           },
-          (payload) => {
-            const fetchNewMessage = async () => {
+          async (payload) => {
+            console.log('New message received:', payload);
+            
+            if (!isMounted) return;
+            
+            try {
+              // Fetch the complete message data with related profiles
               const { data, error } = await supabase
                 .from("messages")
                 .select(`
-                  *,
-                  profiles_sender:profiles!sender_id(*),
-                  profiles_receiver:profiles!receiver_id(*)
+                  id, content, created_at, read, receiver_id, sender_id,
+                  profiles!sender_id (first_name, last_name, avatar_url, user_type),
+                  profiles!receiver_id (first_name, last_name, avatar_url, user_type)
                 `)
                 .eq('id', payload.new.id)
                 .single();
                 
-              if (!error && data) {
+              if (error) throw error;
+              
+              if (data && isMounted) {
                 const newMessage = {
                   id: data.id,
                   content: data.content,
@@ -169,30 +196,47 @@ export default function Messages() {
                   read: data.read,
                   receiver_id: data.receiver_id,
                   sender_id: data.sender_id,
-                  sender_first_name: data.profiles_sender?.first_name || null,
-                  sender_last_name: data.profiles_sender?.last_name || null,
-                  sender_avatar_url: data.profiles_sender?.avatar_url || null,
-                  sender_user_type: data.profiles_sender?.user_type || null,
-                  receiver_first_name: data.profiles_receiver?.first_name || null,
-                  receiver_last_name: data.profiles_receiver?.last_name || null,
-                  receiver_avatar_url: data.profiles_receiver?.avatar_url || null,
-                  receiver_user_type: data.profiles_receiver?.user_type || null,
+                  sender_first_name: data.profiles?.first_name || null,
+                  sender_last_name: data.profiles?.last_name || null,
+                  sender_avatar_url: data.profiles?.avatar_url || null,
+                  sender_user_type: data.profiles?.user_type || null,
+                  receiver_first_name: data.profiles?.first_name || null,
+                  receiver_last_name: data.profiles?.last_name || null,
+                  receiver_avatar_url: data.profiles?.avatar_url || null,
+                  receiver_user_type: data.profiles?.user_type || null,
                 };
                 
                 setMessages(prev => [...prev, newMessage]);
-                scrollToBottom();
+                
+                // Auto-mark as read if current user is the receiver
+                if (data.receiver_id === currentUser.id && !data.read) {
+                  await supabase
+                    .from("messages")
+                    .update({ read: true })
+                    .eq('id', data.id);
+                }
+                
+                setTimeout(scrollToBottom, 100);
               }
-            };
-            
-            fetchNewMessage();
+            } catch (err) {
+              console.error('Error processing real-time message:', err);
+            }
           }
         )
         .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      
+      // Store channel reference for cleanup
+      realtimeChannelRef.current = channel;
     }
+    
+    return () => {
+      isMounted = false;
+      
+      // Clean up realtime subscription
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+      }
+    };
   }, [currentUser?.id, chatPartner?.id, toast]);
   
   const scrollToBottom = () => {
@@ -230,6 +274,7 @@ export default function Messages() {
     }
   };
 
+  // Mark messages as read when viewed
   useEffect(() => {
     const markMessagesAsRead = async () => {
       if (!currentUser?.id || messages.length === 0) return;
@@ -247,6 +292,15 @@ export default function Messages() {
           .in('id', unreadMessageIds);
           
         if (error) throw error;
+        
+        // Update local state to reflect read status
+        setMessages(prev => 
+          prev.map(msg => 
+            unreadMessageIds.includes(msg.id) 
+              ? { ...msg, read: true } 
+              : msg
+          )
+        );
       } catch (error) {
         console.error("Error marking messages as read:", error);
       }
