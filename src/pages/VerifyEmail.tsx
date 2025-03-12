@@ -21,25 +21,37 @@ export default function VerifyEmail() {
   const receivedOtp = location.state?.otp;
 
   useEffect(() => {
-    console.log("VerifyEmail component mounted, email:", email);
-    console.log("Current user status:", currentUser);
+    // Check for stored email and OTP in localStorage
+    const storedEmail = localStorage.getItem('verification_email');
+    const storedOTP = localStorage.getItem('verification_otp');
     
-    // Redirect if no email in state
-    if (!email) {
-      console.log("No email found in state, redirecting to signup");
-      navigate("/signup", { replace: true });
-      return;
+    // If we have stored values but no state values, use the stored ones
+    if (storedEmail && !email) {
+    // We can't directly update location.state, so we'll use the stored values
+    console.log("Using stored email from localStorage:", storedEmail);
+    }
+    
+    if (storedOTP && !otp && !receivedOtp) {
+    console.log("Using stored OTP from localStorage");
+    setOtp(storedOTP);
+    }
+    
+    // Redirect if no email in state or localStorage
+    if (!email && !storedEmail) {
+    console.log("No email found in state or localStorage, redirecting to signup");
+    navigate("/signup", { replace: true });
+    return;
     }
     
     // Redirect if already verified
     if (currentUser?.verified) {
-      console.log("User already verified, redirecting to dashboard");
-      navigate("/dashboard", { replace: true });
+    console.log("User already verified, redirecting to dashboard");
+    navigate("/dashboard", { replace: true });
     }
 
     // Auto-fill OTP if provided in state
     if (receivedOtp && !otp) {
-      setOtp(receivedOtp);
+    setOtp(receivedOtp);
     }
   }, [email, navigate, currentUser, receivedOtp, otp]);
 

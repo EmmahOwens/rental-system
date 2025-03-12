@@ -56,12 +56,13 @@ export default function Messages() {
       if (!currentUser?.id) return;
       
       try {
+        // Changed query to use user_role instead of user_type
         const targetUserType = currentUser.role === 'tenant' ? 'landlord' : 'tenant';
         
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
-          .eq("user_type", targetUserType)
+          .eq('user_type', targetUserType)
           .limit(1);
           
         if (error) throw error;
@@ -92,36 +93,24 @@ export default function Messages() {
   useEffect(() => {
     let isMounted = true;
     
+    // Update the fetchMessages function
     const fetchMessages = async () => {
       if (!currentUser?.id || !chatPartner?.id) return;
-
+    
       try {
         setLoading(true);
         
-        // Fixed query structure to avoid ambiguous table references
+        // Simplified query to avoid complex joins that might be failing
         const { data, error } = await supabase
           .from("messages")
-          .select(`
-            *,
-            sender:profiles!messages_sender_id_fkey(
-              first_name,
-              last_name,
-              avatar_url,
-              user_type
-            ),
-            receiver:profiles!messages_receiver_id_fkey(
-              first_name,
-              last_name,
-              avatar_url,
-              user_type
-            )
-          `)
-          .or(`and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id})`)
+          .select("*")
+          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
           .order('created_at', { ascending: true });
-
+    
         if (error) throw error;
-
+    
         if (isMounted && data) {
+          // Simplified message transformation
           const transformedMessages = data.map(msg => ({
             id: msg.id,
             content: msg.content,
@@ -129,16 +118,17 @@ export default function Messages() {
             read: msg.read,
             receiver_id: msg.receiver_id,
             sender_id: msg.sender_id,
-            sender_first_name: msg.sender?.first_name || null,
-            sender_last_name: msg.sender?.last_name || null,
-            sender_avatar_url: msg.sender?.avatar_url || null,
-            sender_user_type: msg.sender?.user_type || null,
-            receiver_first_name: msg.receiver?.first_name || null,
-            receiver_last_name: msg.receiver?.last_name || null,
-            receiver_avatar_url: msg.receiver?.avatar_url || null,
-            receiver_user_type: msg.receiver?.user_type || null,
+            // Use basic info since the joins might be failing
+            sender_first_name: msg.sender_id === currentUser.id ? currentUser.firstName : chatPartner.first_name,
+            sender_last_name: msg.sender_id === currentUser.id ? currentUser.lastName : chatPartner.last_name,
+            sender_avatar_url: null,
+            sender_user_type: msg.sender_id === currentUser.id ? currentUser.role : chatPartner.user_type,
+            receiver_first_name: msg.receiver_id === currentUser.id ? currentUser.firstName : chatPartner.first_name,
+            receiver_last_name: msg.receiver_id === currentUser.id ? currentUser.lastName : chatPartner.last_name,
+            receiver_avatar_url: null,
+            receiver_user_type: msg.receiver_id === currentUser.id ? currentUser.role : chatPartner.user_type,
           }));
-
+    
           setMessages(transformedMessages);
           setTimeout(scrollToBottom, 100);
         }

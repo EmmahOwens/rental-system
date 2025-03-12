@@ -36,6 +36,30 @@ export default function Login() {
       
       // Navigation will be handled by the useEffect above
     } catch (error: any) {
+      // Special handling for email verification needed
+      if (error.message === "EMAIL_NEEDS_VERIFICATION") {
+        toast({
+          title: "Email verification required",
+          description: "Please verify your email before logging in. We've sent a new verification code.",
+        });
+        
+        // Generate a new OTP
+const otp = await fetch('/api/send-verification-email', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ email }),
+}).then(res => res.json()).then(data => data.otp);
+        
+        // Redirect to verification page
+        navigate("/verify-email", { 
+          state: { email, otp },
+          replace: true 
+        });
+        return;
+      }
+      
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again",
