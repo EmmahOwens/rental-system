@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { assignTenantToLandlord } from '@/utils/profileUtils';
 
 // Types for our user roles
 export type UserRole = 'tenant' | 'landlord' | 'admin';
@@ -117,15 +118,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        // Special handling for email confirmation errors
         if (error.message.includes("Email not confirmed")) {
-          // Store email for verification
           localStorage.setItem('verification_email', email);
           
-          // Generate a new OTP and send it
           const otp = await sendVerificationEmail(email);
           
-          // Throw a specific error to redirect to verification
           throw new Error("EMAIL_NEEDS_VERIFICATION");
         } else {
           throw error;
@@ -168,6 +165,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("User signed up:", data);
       console.log("User role during signup:", role);
       
+      if (role === 'tenant' && data.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .single();
+          
+        if (!profileError && profileData) {
+          await assignTenantToLandlord(profileData.id);
+        }
+      }
+      
       const userForVerification = {
         email,
         name,
@@ -187,20 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendVerificationEmail = async (email: string) => {
-    // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     setCurrentOTP(otp);
     
-    // Store the OTP in localStorage to persist across page refreshes
     localStorage.setItem('verification_otp', otp);
     localStorage.setItem('verification_email', email);
     
-    // Here we would normally send an email with OTP
-    // For now, we'll just log it and return it for demo purposes
     console.log(`Verification OTP for ${email}: ${otp}`);
-    
-    // In a production app, we would send an email here using Supabase Edge Functions
-    // await supabase.functions.invoke('send-verification-email', { body: { email, otp } });
     
     return otp;
   };
@@ -208,29 +210,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyEmail = async (otp: string) => {
     setIsLoading(true);
     
-    // Get stored OTP from localStorage
     const storedOTP = localStorage.getItem('verification_otp');
     const storedEmail = localStorage.getItem('verification_email');
     
-    // Check OTP
     if (otp !== storedOTP) {
       setIsLoading(false);
       throw new Error('Invalid OTP');
     }
     
     try {
-      // For Supabase, we need to properly confirm the email
-      // This is a workaround since we're using our own OTP system
-      // instead of Supabase's built-in email verification
-      
       if (currentUser) {
-        // Update the current user's verified status
         const updatedUser = {
           ...currentUser,
           verified: true
         };
         
-        // Update Supabase user metadata
         const { error: updateError } = await supabase.auth.updateUser({
           data: {
             verified: true
@@ -239,22 +233,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (updateError) throw updateError;
         
-        // Update local state
         setCurrentUser(updatedUser);
         
-        // Clean up localStorage
         localStorage.removeItem('verification_otp');
         localStorage.removeItem('verification_email');
         
         setIsLoading(false);
         return updatedUser.role;
       } else if (pendingVerificationUser) {
-        // For newly registered users who haven't logged in yet
         const userRole = pendingVerificationUser.role;
         
         try {
-          // Try to sign in the user with their credentials
-          // This will make the account active in Supabase
           const { data, error } = await supabase.auth.signInWithPassword({
             email: pendingVerificationUser.email,
             password: pendingVerificationUser.password
@@ -263,7 +252,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (error) {
             console.error("Error signing in after verification:", error);
           } else if (data.user) {
-            // Update the user's metadata to mark as verified
             await supabase.auth.updateUser({
               data: {
                 verified: true
@@ -274,7 +262,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Error during post-verification sign in:", signInError);
         }
         
-        // Clean up
         setPendingVerificationUser(null);
         setCurrentOTP("");
         localStorage.removeItem('verification_otp');
@@ -290,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     setIsLoading(false);
-    return 'tenant'; // Default role if no user found (fallback)
+    return 'tenant';
   };
 
   const resetPassword = async (email: string) => {

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLocation } from "react-router-dom";
+import { getTenantLandlord, getLandlordTenants } from "@/utils/profileUtils";
 
 type Profile = {
   id: string;
@@ -41,76 +43,130 @@ type Message = {
 export default function Messages() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [messageContent, setMessageContent] = useState("");
   const [chatPartner, setChatPartner] = useState<Profile | null>(null);
+  const [availablePartners, setAvailablePartners] = useState<Profile[]>([]);
+  const [loadingPartners, setLoadingPartners] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const realtimeChannelRef = useRef<any>(null);
 
-  // Find a chat partner
   useEffect(() => {
-    const fetchChatPartner = async () => {
+    const specificTenantId = location.state?.tenantId;
+    if (specificTenantId && availablePartners.length > 0) {
+      const tenant = availablePartners.find(p => p.id === specificTenantId);
+      if (tenant) {
+        setChatPartner(tenant);
+      }
+    }
+  }, [location.state, availablePartners]);
+
+  useEffect(() => {
+    const fetchChatPartners = async () => {
       if (!currentUser?.id) return;
       
+      setLoadingPartners(true);
+      
       try {
-        // Changed query to use user_role instead of user_type
-        const targetUserType = currentUser.role === 'tenant' ? 'landlord' : 'tenant';
-        
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("*")
-          .eq('user_type', targetUserType)
-          .limit(1);
+          .select("id, user_type")
+          .eq("user_id", currentUser.id)
+          .single();
           
-        if (error) throw error;
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          return;
+        }
         
-        if (data && data.length > 0) {
-          setChatPartner(data[0]);
-        } else {
-          toast({
-            title: "No chat partner found",
-            description: `No ${targetUserType} found to chat with`,
-            variant: "destructive",
-          });
+        let partners: Profile[] = [];
+        
+        if (profileData.user_type === 'tenant') {
+          const landlordData = await getTenantLandlord(profileData.id);
+          
+          if (landlordData && landlordData.landlords) {
+            partners = [landlordData.landlords as Profile];
+          }
+        } else if (profileData.user_type === 'landlord') {
+          const tenantsData = await getLandlordTenants(profileData.id);
+          
+          if (tenantsData && tenantsData.length > 0) {
+            partners = tenantsData.map(item => item.tenants as Profile);
+          }
+        }
+        
+        setAvailablePartners(partners);
+        
+        if (!chatPartner && partners.length > 0) {
+          setChatPartner(partners[0]);
         }
       } catch (error) {
-        console.error("Error finding chat partner:", error);
+        console.error("Error finding chat partners:", error);
         toast({
-          title: "Failed to find chat partner",
+          title: "Failed to find chat partners",
           description: "Please try again later",
           variant: "destructive",
         });
+      } finally {
+        setLoadingPartners(false);
       }
     };
     
-    fetchChatPartner();
-  }, [currentUser, toast]);
+    fetchChatPartners();
+  }, [currentUser?.id, toast]);
 
-  // Initial message fetch and realtime subscription
   useEffect(() => {
     let isMounted = true;
     
-    // Update the fetchMessages function
     const fetchMessages = async () => {
       if (!currentUser?.id || !chatPartner?.id) return;
     
       try {
         setLoading(true);
         
-        // Simplified query to avoid complex joins that might be failing
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .single();
+          
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from("messages")
-          .select("*")
-          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+          .select(`
+            id,
+            content,
+            created_at,
+            read,
+            receiver_id,
+            sender_id,
+            sender:profiles!messages_sender_id_fkey (
+              first_name,
+              last_name,
+              avatar_url,
+              user_type
+            ),
+            receiver:profiles!messages_receiver_id_fkey (
+              first_name,
+              last_name,
+              avatar_url,
+              user_type
+            )
+          `)
+          .or(`and(sender_id.eq.${profileData.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${profileData.id})`)
           .order('created_at', { ascending: true });
     
         if (error) throw error;
     
         if (isMounted && data) {
-          // Simplified message transformation
           const transformedMessages = data.map(msg => ({
             id: msg.id,
             content: msg.content,
@@ -118,19 +174,29 @@ export default function Messages() {
             read: msg.read,
             receiver_id: msg.receiver_id,
             sender_id: msg.sender_id,
-            // Use basic info since the joins might be failing
-            sender_first_name: msg.sender_id === currentUser.id ? currentUser.firstName : chatPartner.first_name,
-            sender_last_name: msg.sender_id === currentUser.id ? currentUser.lastName : chatPartner.last_name,
-            sender_avatar_url: null,
-            sender_user_type: msg.sender_id === currentUser.id ? currentUser.role : chatPartner.user_type,
-            receiver_first_name: msg.receiver_id === currentUser.id ? currentUser.firstName : chatPartner.first_name,
-            receiver_last_name: msg.receiver_id === currentUser.id ? currentUser.lastName : chatPartner.last_name,
-            receiver_avatar_url: null,
-            receiver_user_type: msg.receiver_id === currentUser.id ? currentUser.role : chatPartner.user_type,
+            sender_first_name: msg.sender?.first_name,
+            sender_last_name: msg.sender?.last_name,
+            sender_avatar_url: msg.sender?.avatar_url,
+            sender_user_type: msg.sender?.user_type,
+            receiver_first_name: msg.receiver?.first_name,
+            receiver_last_name: msg.receiver?.last_name,
+            receiver_avatar_url: msg.receiver?.avatar_url,
+            receiver_user_type: msg.receiver?.user_type,
           }));
     
           setMessages(transformedMessages);
           setTimeout(scrollToBottom, 100);
+          
+          const unreadMessageIds = data
+            .filter(msg => msg.receiver_id === profileData.id && !msg.read)
+            .map(msg => msg.id);
+            
+          if (unreadMessageIds.length > 0) {
+            await supabase
+              .from("messages")
+              .update({ read: true })
+              .in('id', unreadMessageIds);
+          }
         }
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -150,7 +216,6 @@ export default function Messages() {
 
     fetchMessages();
     
-    // Set up realtime subscription
     if (currentUser?.id && chatPartner?.id) {
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
@@ -172,7 +237,6 @@ export default function Messages() {
             if (!isMounted) return;
             
             try {
-              // Fetch the complete message data with related profiles
               const { data, error } = await supabase
                 .from("messages")
                 .select(`
@@ -251,9 +315,20 @@ export default function Messages() {
     
     setSendingMessage(true);
     try {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", currentUser.id)
+        .single();
+        
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        return;
+      }
+      
       const newMessage = {
         content: messageContent.trim(),
-        sender_id: currentUser.id,
+        sender_id: profileData.id,
         receiver_id: chatPartner.id,
         read: false
       };
@@ -277,7 +352,6 @@ export default function Messages() {
     }
   };
 
-  // Mark messages as read when viewed
   useEffect(() => {
     const markMessagesAsRead = async () => {
       if (!currentUser?.id || messages.length === 0) return;
@@ -296,7 +370,6 @@ export default function Messages() {
           
         if (error) throw error;
         
-        // Update local state to reflect read status
         setMessages(prev => 
           prev.map(msg => 
             unreadMessageIds.includes(msg.id) 
@@ -319,13 +392,46 @@ export default function Messages() {
     }
   };
 
-  if (loading) {
+  if (loading && !chatPartner) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  const renderPartnerSelector = () => {
+    if (availablePartners.length <= 1) return null;
+    
+    return (
+      <div className="mb-4 p-3 border-b">
+        <div className="text-sm font-medium mb-2">Select a chat partner:</div>
+        <div className="flex flex-wrap gap-2">
+          {availablePartners.map(partner => (
+            <Button
+              key={partner.id}
+              variant={chatPartner?.id === partner.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setChatPartner(partner)}
+              className="flex items-center gap-2"
+            >
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={partner.avatar_url || `/placeholder.svg`} />
+                <AvatarFallback>
+                  {partner.first_name?.charAt(0) || partner.user_type?.charAt(0) || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <span>
+                {partner.first_name && partner.last_name 
+                  ? `${partner.first_name} ${partner.last_name}` 
+                  : `${partner.user_type?.charAt(0).toUpperCase()}${partner.user_type?.slice(1) || 'User'}`}
+              </span>
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (!chatPartner) {
     return (
@@ -338,6 +444,8 @@ export default function Messages() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] md:h-[calc(100vh-150px)]">
+      {renderPartnerSelector()}
+      
       <div className="flex items-center p-3 md:p-4 border-b">
         <Avatar className="h-8 w-8 md:h-10 md:w-10 mr-2 md:mr-3">
           <AvatarImage src={chatPartner.avatar_url || `/placeholder.svg`} />

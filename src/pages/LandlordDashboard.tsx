@@ -1,11 +1,14 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
-import { Home, Users, MessageSquare, CreditCard, Bell, Calendar, PieChart, Building, ArrowUpCircle } from "lucide-react";
+import { Home, Users, MessageSquare, CreditCard, Bell, Calendar, PieChart, Building, ArrowUpCircle, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useIconColor } from "@/hooks/use-icon-color";
+import { getLandlordTenants } from "@/utils/profileUtils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 // Format UGX currency
 const formatUGX = (amount: number) => {
@@ -17,6 +20,8 @@ export default function LandlordDashboard() {
   const navigate = useNavigate();
   const [recentMessages, setRecentMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState(true);
   const iconColor = useIconColor();
 
   const landlordMetrics = [
@@ -68,6 +73,49 @@ export default function LandlordDashboard() {
     fetchRecentMessages();
   }, [currentUser?.id]);
 
+  // Fetch tenants
+  useEffect(() => {
+    const fetchTenants = async () => {
+      if (!currentUser?.id) return;
+      
+      try {
+        setLoadingTenants(true);
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .single();
+          
+        if (profileError) {
+          console.error("Error fetching landlord profile:", profileError);
+          return;
+        }
+        
+        const tenantsData = await getLandlordTenants(profileData.id);
+        
+        if (tenantsData) {
+          const formattedTenants = tenantsData.map(item => ({
+            id: item.tenant_id,
+            name: item.tenants.first_name && item.tenants.last_name 
+              ? `${item.tenants.first_name} ${item.tenants.last_name}` 
+              : "Unnamed Tenant",
+            avatar: item.tenants.avatar_url,
+            phone: item.tenants.phone || "No phone",
+          }));
+          
+          setTenants(formattedTenants);
+        }
+      } catch (error) {
+        console.error("Error fetching tenants:", error);
+      } finally {
+        setLoadingTenants(false);
+      }
+    };
+    
+    fetchTenants();
+  }, [currentUser?.id]);
+
   // Format timestamp
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -87,6 +135,11 @@ export default function LandlordDashboard() {
   // Navigate to messages page
   const handleViewAllMessages = () => {
     navigate('/messages');
+  };
+  
+  // Navigate to tenant messages
+  const handleMessageTenant = (tenantId: string) => {
+    navigate('/messages', { state: { tenantId } });
   };
 
   return (
@@ -114,31 +167,61 @@ export default function LandlordDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         <NeumorphicCard className="p-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" color={iconColor} />
-            Recent Applications
+            Your Tenants
           </h2>
           
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="neumorph p-4 rounded-lg">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">John Doe</h3>
-                    <p className="text-sm text-muted-foreground">Applied for Sunset Apartments, #{200 + i}</p>
-                  </div>
-                  <span className="px-2 py-1 text-xs rounded-full bg-accent text-accent-foreground">New</span>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button className="neumorph-button text-sm py-1">View</button>
-                  <button className="neumorph-button text-sm py-1 bg-primary text-primary-foreground">Approve</button>
-                </div>
+            {loadingTenants ? (
+              <div className="text-center py-4 text-muted-foreground">Loading tenants...</div>
+            ) : tenants.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No tenants found
               </div>
-            ))}
+            ) : (
+              tenants.map((tenant) => (
+                <div key={tenant.id} className="neumorph p-4 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 neumorph rounded-full">
+                        {tenant.avatar ? (
+                          <img src={tenant.avatar} alt={tenant.name} className="h-10 w-10 rounded-full" />
+                        ) : (
+                          <User className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{tenant.name}</h3>
+                        <p className="text-sm text-muted-foreground">{tenant.phone}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-primary/10">Tenant</Badge>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleMessageTenant(tenant.id)}
+                      className="neumorph-button text-sm py-1 flex items-center gap-1"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      Message
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
             
-            <button className="neumorph-button w-full mt-2">View All Applications</button>
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/tenants')}
+              className="neumorph-button w-full mt-2"
+            >
+              View All Tenants
+            </Button>
           </div>
         </NeumorphicCard>
 
@@ -180,6 +263,35 @@ export default function LandlordDashboard() {
             >
               View All Messages
             </button>
+          </div>
+        </NeumorphicCard>
+      </div>
+      
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <NeumorphicCard className="p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" color={iconColor} />
+            Recent Applications
+          </h2>
+          
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="neumorph p-4 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">John Doe</h3>
+                    <p className="text-sm text-muted-foreground">Applied for Sunset Apartments, #{200 + i}</p>
+                  </div>
+                  <span className="px-2 py-1 text-xs rounded-full bg-accent text-accent-foreground">New</span>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button className="neumorph-button text-sm py-1">View</button>
+                  <button className="neumorph-button text-sm py-1 bg-primary text-primary-foreground">Approve</button>
+                </div>
+              </div>
+            ))}
+            
+            <button className="neumorph-button w-full mt-2">View All Applications</button>
           </div>
         </NeumorphicCard>
       </div>
