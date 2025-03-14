@@ -130,3 +130,140 @@ export const getLandlordTenants = async (landlordId: string) => {
     return [];
   }
 };
+
+// Add these functions to the existing profileUtils.ts file
+
+export const updateUserProfile = async (
+  profileId: string,
+  profileData: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    address?: string;
+    bio?: string;
+  }
+): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(profileData)
+      .eq("id", profileId)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error("Error updating profile:", error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error in updateUserProfile:", error);
+    return null;
+  }
+};
+
+export const uploadProfileAvatar = async (
+  profileId: string,
+  file: File
+): Promise<string | null> => {
+  try {
+    // Generate a unique file path
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${profileId}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+    
+    // Upload file to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+      
+    if (uploadError) {
+      console.error("Error uploading avatar:", uploadError);
+      return null;
+    }
+    
+    // Get the public URL
+    const { data } = await supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+      
+    const avatarUrl = data.publicUrl;
+    
+    // Update the profile with the new avatar URL
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", profileId);
+      
+    if (updateError) {
+      console.error("Error updating profile with avatar URL:", updateError);
+      return null;
+    }
+    
+    return avatarUrl;
+  } catch (error) {
+    console.error("Error in uploadProfileAvatar:", error);
+    return null;
+  }
+};
+
+export const updateUserSettings = async (
+  userId: string,
+  settings: {
+    email_notifications?: boolean;
+    sms_notifications?: boolean;
+    theme_preference?: string;
+    language_preference?: string;
+  }
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("user_settings")
+      .upsert({
+        user_id: userId,
+        ...settings,
+        updated_at: new Date().toISOString()
+      });
+      
+    if (error) {
+      console.error("Error updating user settings:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in updateUserSettings:", error);
+    return false;
+  }
+};
+
+export const getUserSettings = async (userId: string): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from("user_settings")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error("Error fetching user settings:", error);
+      return null;
+    }
+    
+    // Return default settings if none exist
+    if (!data) {
+      return {
+        email_notifications: true,
+        sms_notifications: false,
+        theme_preference: 'light',
+        language_preference: 'en'
+      };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error in getUserSettings:", error);
+    return null;
+  }
+};

@@ -1,6 +1,6 @@
 
-import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
+// Remove duplicate import since useAuth is imported below
+// Remove duplicate import since cn is already imported below
 import { useState, useEffect, memo, useCallback } from "react";
 import { 
   Home, 
@@ -17,11 +17,20 @@ import {
   ChevronRight,
   Menu,
   X,
+  LogOut, 
+  FileText,
+  Wrench, // Changed from Tool to Wrench
+  BarChart4,
+  Building
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { NavLink } from "react-router-dom"; // Add this import for NavLink
+import { useAuth } from "@/contexts/AuthContext"; // Fixed import path
+import { useProfile } from "../hooks/useProfile";
+import { useIsMobile } from "@/hooks/use-mobile"; // Import only useIsMobile since useMediaQuery is not exported
 import { useTheme } from "@/contexts/ThemeContext";
 import { useIconColor } from "@/hooks/use-icon-color";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -58,12 +67,14 @@ const SidebarItem = memo(function SidebarItem({ icon: Icon, label, to, collapsed
 });
 
 export const Sidebar = memo(function Sidebar() {
-  const { currentUser } = useAuth();
-  const role = currentUser?.role;
+  const { currentUser, logout } = useAuth();
+  const { profile } = useProfile();
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useIsMobile(); // Use the imported useIsMobile hook instead
   const iconColor = useIconColor();
+  
+  const isLandlord = profile?.user_type === 'landlord';
 
   useEffect(() => {
     if (isMobile) {
@@ -89,29 +100,66 @@ export const Sidebar = memo(function Sidebar() {
     }
   }, [isMobile]);
 
-  const tenantLinks = [
-    { icon: Home, label: "Dashboard", to: "/dashboard" },
-    { icon: CreditCard, label: "Payments", to: "/payments" },
-    { icon: MessageSquare, label: "Messages", to: "/messages" },
-    { icon: Bell, label: "Notifications", to: "/notifications" },
-    { icon: CalendarDays, label: "Calendar", to: "/calendar" },
-    { icon: HelpCircle, label: "Support", to: "/support" },
-    { icon: Settings, label: "Settings", to: "/settings" },
+  const navItems = [
+    {
+      label: "Dashboard",
+      icon: Home,
+      href: isLandlord ? "/landlord-dashboard" : "/tenant-dashboard",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Properties",
+      icon: Building,
+      href: "/properties",
+      showFor: ["landlord", "tenant"],
+    },
+    {
+      label: isLandlord ? "Tenants" : "Landlord",
+      icon: Users,
+      href: isLandlord ? "/tenants" : "/landlord",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Messages",
+      icon: MessageSquare,
+      href: "/messages",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Payments",
+      icon: CreditCard,
+      href: "/payments",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Maintenance",
+      icon: Wrench, // Changed from Tool to Wrench
+      href: "/maintenance",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Documents",
+      icon: FileText,
+      href: "/documents",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Analytics",
+      icon: BarChart4,
+      href: "/analytics",
+      showFor: ["tenant", "landlord"],
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      href: "/settings",
+      showFor: ["tenant", "landlord"],
+    },
   ];
 
-  const landlordLinks = [
-    { icon: Home, label: "Dashboard", to: "/dashboard" },
-    { icon: Users, label: "Tenants", to: "/tenants" },
-    { icon: CreditCard, label: "Payments", to: "/payments" },
-    { icon: MessageSquare, label: "Messages", to: "/messages" },
-    { icon: UserPlus, label: "Applications", to: "/applications" },
-    { icon: Activity, label: "Analytics", to: "/analytics" },
-    { icon: Bell, label: "Notifications", to: "/notifications" },
-    { icon: CalendarDays, label: "Calendar", to: "/calendar" },
-    { icon: Settings, label: "Settings", to: "/settings" },
-  ];
-
-  const links = role === 'landlord' ? landlordLinks : tenantLinks;
+  const filteredNavItems = navItems.filter(
+    (item) => !profile?.user_type || item.showFor.includes(profile.user_type)
+  );
 
   return (
     <>
@@ -157,16 +205,33 @@ export const Sidebar = memo(function Sidebar() {
                 </button>
               </div>
               
-              {links.map((link) => (
-                <SidebarItem
-                  key={link.to}
-                  icon={link.icon}
-                  label={link.label}
-                  to={link.to}
-                  collapsed={collapsed}
-                  onClick={closeSidebar}
-                />
-              ))}
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-primary">RentalSystem</h2>
+              </div>
+              
+              <nav className="flex-1 space-y-1">
+                {filteredNavItems.map((item) => (
+                  <SidebarItem
+                    key={item.href}
+                    icon={item.icon}
+                    label={item.label}
+                    to={item.href}
+                    collapsed={collapsed}
+                    onClick={closeSidebar}
+                  />
+                ))}
+              </nav>
+              
+              <div className="p-4 border-t mt-auto">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-muted-foreground"
+                  onClick={logout}
+                >
+                  <LogOut className="h-5 w-5 mr-3" />
+                  {!collapsed && "Logout"}
+                </Button>
+              </div>
             </div>
           </aside>
         </>
