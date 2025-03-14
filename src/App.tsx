@@ -1,4 +1,5 @@
 
+import React from 'react'; // Add React import
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -84,93 +85,96 @@ function RoleBasedDashboard() {
   }
 }
 
+// Keep only one App component definition
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
-              
-              {/* Dashboard router */}
-              <Route path="/dashboard" element={<RoleBasedDashboard />} />
-              
-              {/* Role-specific dashboards */}
-              <Route path="/tenant/dashboard" element={
-                <ProtectedRoute requiredRole="tenant">
-                  <TenantDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/landlord/dashboard" element={
-                <ProtectedRoute requiredRole="landlord">
-                  <LandlordDashboard />
-                </ProtectedRoute>
-              } />
-              
-              {/* Protected routes */}
-              <Route path="/payments" element={
-                <ProtectedRoute>
-                  <Payments />
-                </ProtectedRoute>
-              } />
-              <Route path="/messages" element={
-                <ProtectedRoute>
-                  <Messages />
-                </ProtectedRoute>
-              } />
-              <Route path="/notifications" element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              } />
-              <Route path="/calendar" element={
-                <ProtectedRoute>
-                  <Calendar />
-                </ProtectedRoute>
-              } />
-              <Route path="/support" element={
-                <ProtectedRoute>
-                  <Support />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              
-              {/* Landlord only routes */}
-              <Route path="/tenants" element={
-                <ProtectedRoute requiredRole="landlord">
-                  <Tenants />
-                </ProtectedRoute>
-              } />
-              <Route path="/applications" element={
-                <ProtectedRoute requiredRole="landlord">
-                  <Applications />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute requiredRole="landlord">
-                  <Analytics />
-                </ProtectedRoute>
-              } />
-              
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                
+                {/* Dashboard router */}
+                <Route path="/dashboard" element={<RoleBasedDashboard />} />
+                
+                {/* Role-specific dashboards */}
+                <Route path="/tenant/dashboard" element={
+                  <ProtectedRoute requiredRole="tenant">
+                    <TenantDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/landlord/dashboard" element={
+                  <ProtectedRoute requiredRole="landlord">
+                    <LandlordDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Protected routes */}
+                <Route path="/payments" element={
+                  <ProtectedRoute>
+                    <Payments />
+                  </ProtectedRoute>
+                } />
+                <Route path="/messages" element={
+                  <ProtectedRoute>
+                    <Messages />
+                  </ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } />
+                <Route path="/calendar" element={
+                  <ProtectedRoute>
+                    <Calendar />
+                  </ProtectedRoute>
+                } />
+                <Route path="/support" element={
+                  <ProtectedRoute>
+                    <Support />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Landlord only routes */}
+                <Route path="/tenants" element={
+                  <ProtectedRoute requiredRole="landlord">
+                    <Tenants />
+                  </ProtectedRoute>
+                } />
+                <Route path="/applications" element={
+                  <ProtectedRoute requiredRole="landlord">
+                    <Applications />
+                  </ProtectedRoute>
+                } />
+                <Route path="/analytics" element={
+                  <ProtectedRoute requiredRole="landlord">
+                    <Analytics />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
 );
 
 export default App;
