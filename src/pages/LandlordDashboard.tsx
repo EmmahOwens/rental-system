@@ -5,7 +5,7 @@ import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getLandlordTenants } from "@/utils/profileUtils";
+import { getLandlordTenants, TenantWithConnection } from "@/utils/profileUtils";
 import { Link } from "react-router-dom";
 import {
   Building,
@@ -18,17 +18,11 @@ import {
   BarChart4,
   Loader2,
 } from "lucide-react";
-import { Profile } from "@/integrations/supabase/types";
 
 // Format UGX currency
 const formatUGX = (amount: number) => {
   return `UGX ${amount.toLocaleString("en-UG")}`;
 };
-
-interface TenantWithConnection extends Profile {
-  connection_id: string;
-  connection_status: string;
-}
 
 export default function LandlordDashboard() {
   const { currentUser } = useAuth();

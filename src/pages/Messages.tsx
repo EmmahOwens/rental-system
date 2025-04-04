@@ -9,15 +9,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Send, Search, Users, Phone, Video } from "lucide-react";
-import { getTenantLandlords, getLandlordTenants } from "@/utils/profileUtils";
-import { sendMessage, fetchMessages, markMessageAsRead, subscribeToMessages } from "@/utils/messageUtils";
-import { Profile } from "@/integrations/supabase/types";
-
-interface Contact extends Profile {
-  connection_id: string;
-  connection_status: string;
-  unread_count?: number;
-}
+import { getTenantLandlords, getLandlordTenants, Profile, TenantWithConnection } from "@/utils/profileUtils";
+import { getMessages, markMessageAsRead, subscribeToMessages, sendMessage } from "@/utils/messageUtils";
 
 interface Message {
   id: string;
@@ -33,8 +26,8 @@ interface Message {
 export default function Messages() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [contacts, setContacts] = useState<TenantWithConnection[]>([]);
+  const [selectedContact, setSelectedContact] = useState<TenantWithConnection | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +43,7 @@ export default function Messages() {
       
       try {
         setIsLoading(true);
-        let loadedContacts: Contact[] = [];
+        let loadedContacts: TenantWithConnection[] = [];
         
         if (isLandlord) {
           // Landlords see their tenants
@@ -79,7 +72,7 @@ export default function Messages() {
     }
     
     loadContacts();
-  }, [currentUser, isLandlord, toast]);
+  }, [currentUser, isLandlord, toast, selectedContact]);
 
   // Load messages when selected contact changes
   useEffect(() => {
@@ -87,7 +80,7 @@ export default function Messages() {
       if (!currentUser?.id || !selectedContact?.id) return;
       
       try {
-        const loadedMessages = await fetchMessages(currentUser.id, selectedContact.id);
+        const loadedMessages = await getMessages(currentUser.id, selectedContact.id);
         setMessages(loadedMessages);
         
         // Mark unread messages as read
@@ -126,7 +119,7 @@ export default function Messages() {
   useEffect(() => {
     if (!currentUser?.id) return;
     
-    const subscription = subscribeToMessages(currentUser.id, (payload) => {
+    const subscription = subscribeToMessages(currentUser.id, (payload: any) => {
       const newMessage = payload.new;
       
       // Add the new message to the message list if it belongs to the current conversation
@@ -222,8 +215,8 @@ export default function Messages() {
 
         <div className="flex flex-1 gap-6 h-full overflow-hidden">
           {/* Contacts Sidebar */}
-          <NeumorphicCard className="w-full md:w-80 flex flex-col h-full overflow-hidden">
-            <div className="p-4 border-b">
+          <div className="w-full md:w-80 flex flex-col h-full overflow-hidden">
+            <NeumorphicCard className="p-4 border-b">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -233,7 +226,7 @@ export default function Messages() {
                   className="pl-10 neumorph-input"
                 />
               </div>
-            </div>
+            </NeumorphicCard>
             
             <div className="flex-1 overflow-y-auto p-2">
               {isLoading ? (
@@ -284,125 +277,127 @@ export default function Messages() {
                 ))
               )}
             </div>
-          </NeumorphicCard>
+          </div>
 
           {/* Chat Area */}
-          <NeumorphicCard className="flex-1 flex flex-col h-full overflow-hidden">
-            {selectedContact ? (
-              <>
-                {/* Chat Header */}
-                <div className="p-4 border-b flex justify-between items-center">
-                  <div className="flex items-center">
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={selectedContact.avatar_url || ""} />
-                      <AvatarFallback>
-                        {(selectedContact.first_name?.[0] || "") +
-                          (selectedContact.last_name?.[0] || "")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-medium">
-                        {selectedContact.first_name} {selectedContact.last_name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {isLandlord ? 'Tenant' : 'Landlord'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="icon" variant="ghost" className="neumorph h-9 w-9">
-                      <Phone className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="neumorph h-9 w-9">
-                      <Video className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 neumorph-inset">
-                  <div className="space-y-4">
-                    {messages.length === 0 ? (
-                      <div className="text-center p-6">
-                        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                        <h3 className="font-medium mb-1">No messages yet</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Send a message to start the conversation
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <NeumorphicCard className="flex-1 flex flex-col h-full overflow-hidden">
+              {selectedContact ? (
+                <>
+                  {/* Chat Header */}
+                  <div className="p-4 border-b flex justify-between items-center">
+                    <div className="flex items-center">
+                      <Avatar className="h-10 w-10 mr-3">
+                        <AvatarImage src={selectedContact.avatar_url || ""} />
+                        <AvatarFallback>
+                          {(selectedContact.first_name?.[0] || "") +
+                            (selectedContact.last_name?.[0] || "")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">
+                          {selectedContact.first_name} {selectedContact.last_name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {isLandlord ? 'Tenant' : 'Landlord'}
                         </p>
                       </div>
-                    ) : (
-                      messages.map((message) => {
-                        const isSentByCurrentUser = message.sender_id === currentUser?.id;
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
-                          >
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="icon" variant="ghost" className="neumorph h-9 w-9">
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="neumorph h-9 w-9">
+                        <Video className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto p-4 neumorph-inset">
+                    <div className="space-y-4">
+                      {messages.length === 0 ? (
+                        <div className="text-center p-6">
+                          <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                          <h3 className="font-medium mb-1">No messages yet</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Send a message to start the conversation
+                          </p>
+                        </div>
+                      ) : (
+                        messages.map((message) => {
+                          const isSentByCurrentUser = message.sender_id === currentUser?.id;
+                          return (
                             <div
-                              className={`max-w-[75%] px-4 py-3 rounded-2xl ${
-                                isSentByCurrentUser
-                                  ? "bg-primary text-white rounded-tr-none neumorph"
-                                  : "bg-background rounded-tl-none neumorph-inset"
-                              }`}
+                              key={message.id}
+                              className={`flex ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
                             >
-                              <p>{message.content}</p>
-                              <p
-                                className={`text-xs mt-1 ${
-                                  isSentByCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                              <div
+                                className={`max-w-[75%] px-4 py-3 rounded-2xl ${
+                                  isSentByCurrentUser
+                                    ? "bg-primary text-white rounded-tr-none neumorph"
+                                    : "bg-background rounded-tl-none neumorph-inset"
                                 }`}
                               >
-                                {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-                              </p>
+                                <p>{message.content}</p>
+                                <p
+                                  className={`text-xs mt-1 ${
+                                    isSentByCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </div>
-
-                {/* Message Input */}
-                <div className="p-4 border-t">
-                  <div className="flex gap-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                      className="neumorph-input"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={isSending || !newMessage.trim()}
-                      className="neumorph-button bg-primary text-primary-foreground"
-                    >
-                      {isSending ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
-                      ) : (
-                        <Send className="h-5 w-5" />
+                          );
+                        })
                       )}
-                    </Button>
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </div>
+
+                  {/* Message Input */}
+                  <div className="p-4 border-t">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message..."
+                        className="neumorph-input"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={isSending || !newMessage.trim()}
+                        className="neumorph-button bg-primary text-primary-foreground"
+                      >
+                        {isSending ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center p-6">
+                    <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
+                    <p className="text-muted-foreground mb-4">
+                      Select a contact to start messaging
+                    </p>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center p-6">
-                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
-                  <p className="text-muted-foreground mb-4">
-                    Select a contact to start messaging
-                  </p>
-                </div>
-              </div>
-            )}
-          </NeumorphicCard>
+              )}
+            </NeumorphicCard>
+          </div>
         </div>
       </div>
     </DashboardLayout>

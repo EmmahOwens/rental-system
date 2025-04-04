@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -7,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Message, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead } from "@/utils/messageUtils";
-import { getTenantLandlord, getLandlordTenants } from "@/utils/profileUtils";
+import { getTenantLandlords, getLandlordTenants } from "@/utils/profileUtils";
 
 interface ChatInterfaceProps {
   connectionId: string;
@@ -31,14 +32,14 @@ export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
     if (!connectionId || !profile) return;
 
     const fetchMessages = async () => {
-      const fetchedMessages = await getMessages(connectionId);
+      const fetchedMessages = await getMessages(profile.id, otherUser.id);
       setMessages(fetchedMessages);
       await markMessagesAsRead(connectionId, profile.id);
     };
 
     fetchMessages();
 
-    const subscription = subscribeToMessages(connectionId, (message) => {
+    const subscription = subscribeToMessages(profile.id, (message) => {
       setMessages((prev) => [...prev, message]);
       if (message.sender_id !== profile.id) {
         markMessagesAsRead(connectionId, profile.id);
@@ -48,7 +49,7 @@ export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [connectionId, profile]);
+  }, [connectionId, profile, otherUser.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,7 +61,11 @@ export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
 
     setLoading(true);
     try {
-      await sendMessage(connectionId, profile.id, newMessage.trim());
+      await sendMessage({
+        content: newMessage.trim(),
+        sender_id: profile.id,
+        receiver_id: otherUser.id
+      });
       setNewMessage("");
     } catch (error) {
       console.error("Failed to send message:", error);
