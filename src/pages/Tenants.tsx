@@ -1,314 +1,197 @@
 
+import React, { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  ChevronDown, 
-  Filter, 
-  Home, 
-  Plus, 
-  Search, 
-  User, 
-  UserMinus, 
-  UserPlus,
-  MessageSquare 
-} from "lucide-react";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { getLandlordTenants } from "@/utils/profileUtils";
+import { sendMessage } from "@/utils/messageUtils";
 import { useNavigate } from "react-router-dom";
+import { Profile } from "@/integrations/supabase/types";
+import { 
+  Users, 
+  MessageSquare, 
+  Home, 
+  Phone, 
+  Mail, 
+  Calendar, 
+  CheckCircle,
+  AlertCircle,
+  Loader2 
+} from "lucide-react";
+import { format } from "date-fns";
 
-type Tenant = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  property: string;
-  status: string;
-  moveInDate: string;
-  leaseEnd: string;
-  profileId: string;
-};
+interface TenantWithConnection extends Profile {
+  connection_id: string;
+  connection_status: string;
+}
 
 export default function Tenants() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalTenants: 0,
-    occupancyRate: 0,
-    newApplications: 0
-  });
+  const [tenants, setTenants] = useState<TenantWithConnection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch tenants data
   useEffect(() => {
-    const fetchTenants = async () => {
-      if (!currentUser?.id) return;
-      
-      try {
-        setLoading(true);
-        
-        // Get landlord profile ID
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", currentUser.id)
-          .single();
-          
-        if (profileError) {
-          console.error("Error fetching landlord profile:", profileError);
-          return;
-        }
-        
-        // Get landlord's tenants
-        const tenantsData = await getLandlordTenants(profileData.id);
-        
-        if (tenantsData && tenantsData.length > 0) {
-          // Also get property and tenancy data for each tenant
-          const tenantsWithDetails = await Promise.all(
-            tenantsData.map(async (item) => {
-              // Get tenancy information if available
-              const { data: tenancyData, error: tenancyError } = await supabase
-                .from("tenancies")
-                .select(`
-                  id,
-                  start_date,
-                  end_date,
-                  active,
-                  property:properties(name)
-                `)
-                .eq("tenant_id", item.tenant_id)
-                .order('created_at', { ascending: false })
-                .limit(1);
-              
-              // Get user email from auth
-              const { data: userData, error: userError } = await supabase
-                .from("profiles")
-                .select("user_id")
-                .eq("id", item.tenant_id)
-                .single();
-              
-              let email = "";
-              if (!userError && userData) {
-                const { data: authData } = await supabase.auth.admin.getUserById(userData.user_id);
-                if (authData?.user) {
-                  email = authData.user.email || "";
-                }
-              }
-              
-              return {
-                id: item.tenant_id,
-                name: item.tenants.first_name && item.tenants.last_name 
-                  ? `${item.tenants.first_name} ${item.tenants.last_name}` 
-                  : "Unnamed Tenant",
-                email: email,
-                phone: item.tenants.phone || "No phone",
-                property: tenancyError || !tenancyData || tenancyData.length === 0 
-                  ? "No property assigned" 
-                  : tenancyData[0].property?.name || "Unknown property",
-                status: tenancyError || !tenancyData || tenancyData.length === 0 
-                  ? "Inactive" 
-                  : tenancyData[0].active ? "Active" : "Inactive",
-                moveInDate: tenancyError || !tenancyData || tenancyData.length === 0 
-                  ? "N/A" 
-                  : new Date(tenancyData[0].start_date).toLocaleDateString(),
-                leaseEnd: tenancyError || !tenancyData || tenancyData.length === 0 || !tenancyData[0].end_date
-                  ? "N/A" 
-                  : new Date(tenancyData[0].end_date).toLocaleDateString(),
-                profileId: item.tenant_id
-              };
-            })
-          );
-          
-          setTenants(tenantsWithDetails);
-          
-          // Update stats
-          setStats({
-            totalTenants: tenantsWithDetails.length,
-            occupancyRate: Math.round((tenantsWithDetails.filter(t => t.status === "Active").length / tenantsWithDetails.length) * 100),
-            newApplications: 5 // This should be replaced with actual application count
+    async function loadTenants() {
+      if (currentUser && currentUser.id) {
+        try {
+          setIsLoading(true);
+          const loadedTenants = await getLandlordTenants(currentUser.id);
+          setTenants(loadedTenants);
+        } catch (error) {
+          console.error("Error loading tenants:", error);
+          toast({
+            title: "Error loading tenants",
+            description: "Please try again later",
+            variant: "destructive",
           });
-        } else {
-          // Display mock data if no tenants found
-          setTenants([]);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Error fetching tenants:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    }
+
+    loadTenants();
+  }, [currentUser, toast]);
+
+  const handleMessageTenant = async (tenant: TenantWithConnection) => {
+    if (!currentUser) return;
     
-    fetchTenants();
-  }, [currentUser?.id]);
-
-  const handleRemoveTenant = (id: string, name: string) => {
-    toast({
-      title: "Tenant removal initiated",
-      description: `${name} will be removed after confirmation`,
-    });
+    try {
+      // Send initial message if none exists
+      await sendMessage({
+        content: "Hello! How can I help you today?",
+        sender_id: currentUser.id,
+        receiver_id: tenant.id,
+      });
+      
+      // Navigate to messages page
+      navigate("/messages");
+      
+      toast({
+        title: "Conversation started",
+        description: `You can now chat with ${tenant.first_name} ${tenant.last_name}`,
+      });
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      toast({
+        title: "Error starting conversation",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleMessageTenant = (profileId: string) => {
-    navigate('/messages', { state: { tenantId: profileId } });
-  };
-
-  // Filter tenants based on search term
-  const filteredTenants = tenants.filter(tenant => 
-    tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tenant.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tenant.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tenant.property.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Tenants</h1>
-        <p className="text-muted-foreground">Manage your property tenants</p>
+        <h1 className="text-3xl font-bold mb-2 flex items-center">
+          <Users className="mr-2 h-8 w-8 text-primary" />
+          My Tenants
+        </h1>
+        <p className="text-muted-foreground">
+          Manage and communicate with your tenants
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <NeumorphicCard className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 neumorph rounded-full">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Tenants</p>
-              <p className="text-2xl font-bold">{stats.totalTenants}</p>
-            </div>
-          </div>
-        </NeumorphicCard>
-        
-        <NeumorphicCard className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 neumorph rounded-full">
-              <Home className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Occupancy Rate</p>
-              <p className="text-2xl font-bold">{stats.occupancyRate}%</p>
-            </div>
-          </div>
-        </NeumorphicCard>
-        
-        <NeumorphicCard className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 neumorph rounded-full">
-              <UserPlus className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">New Applications</p>
-              <p className="text-2xl font-bold">{stats.newApplications}</p>
-            </div>
-          </div>
-        </NeumorphicCard>
-      </div>
-
-      <NeumorphicCard className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl font-bold">Tenant Directory</h2>
-          
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search tenants..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="neumorph-input pl-10 w-full"
-              />
-            </div>
-            
-            <button className="neumorph-button flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Filter
-              <ChevronDown className="h-4 w-4" />
-            </button>
-            
-            <button className="neumorph-button bg-primary text-primary-foreground flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Tenant
-            </button>
-          </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-        
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : filteredTenants.length === 0 ? (
-          <div className="text-center py-10">
-            <h3 className="text-lg font-semibold mb-2">No tenants found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Try adjusting your search criteria" : "You don't have any tenants yet"}
+      ) : tenants.length === 0 ? (
+        <NeumorphicCard className="p-8 text-center">
+          <div className="flex flex-col items-center justify-center p-8">
+            <Users className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">No tenants yet</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have any tenants associated with your account yet.
             </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-left border-b border-border">
-                  <th className="pb-3">Name</th>
-                  <th className="pb-3">Property</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3">Move-in Date</th>
-                  <th className="pb-3">Lease End</th>
-                  <th className="pb-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTenants.map((tenant) => (
-                  <tr key={tenant.id} className="border-b border-border">
-                    <td className="py-4">
-                      <div>
-                        <p className="font-medium">{tenant.name}</p>
-                        <p className="text-sm text-muted-foreground">{tenant.email}</p>
+        </NeumorphicCard>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tenants.map((tenant) => (
+            <NeumorphicCard 
+              key={tenant.id} 
+              className="p-6 overflow-hidden hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="h-14 w-14 rounded-full overflow-hidden neumorph-inset flex items-center justify-center mr-3">
+                    {tenant.avatar_url ? (
+                      <img 
+                        src={tenant.avatar_url} 
+                        alt={`${tenant.first_name} ${tenant.last_name}`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-lg font-semibold text-primary">
+                          {tenant.first_name?.[0]}{tenant.last_name?.[0]}
+                        </span>
                       </div>
-                    </td>
-                    <td className="py-4">{tenant.property}</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        tenant.status === 'Active' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                      }`}>
-                        {tenant.status}
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">
+                      {tenant.first_name} {tenant.last_name}
+                    </h3>
+                    <div className="flex items-center">
+                      {tenant.connection_status === 'active' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {tenant.connection_status === 'active' 
+                          ? 'Active Tenant' 
+                          : 'Pending Approval'}
                       </span>
-                    </td>
-                    <td className="py-4">{tenant.moveInDate}</td>
-                    <td className="py-4">{tenant.leaseEnd}</td>
-                    <td className="py-4">
-                      <div className="flex gap-2">
-                        <button 
-                          className="neumorph-button text-sm py-1 flex items-center gap-1"
-                          onClick={() => handleMessageTenant(tenant.profileId)}
-                        >
-                          <MessageSquare className="h-3 w-3" />
-                          Message
-                        </button>
-                        <button 
-                          className="neumorph-button text-sm py-1 flex items-center gap-1 text-destructive"
-                          onClick={() => handleRemoveTenant(tenant.id, tenant.name)}
-                        >
-                          <UserMinus className="h-3 w-3" />
-                          Remove
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </NeumorphicCard>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center text-sm">
+                  <Mail className="h-4 w-4 text-primary mr-2" />
+                  <span className="text-muted-foreground">{tenant.email || 'No email provided'}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Phone className="h-4 w-4 text-primary mr-2" />
+                  <span className="text-muted-foreground">{tenant.phone || 'No phone provided'}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Home className="h-4 w-4 text-primary mr-2" />
+                  <span className="text-muted-foreground">Unit #304</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Calendar className="h-4 w-4 text-primary mr-2" />
+                  <span className="text-muted-foreground">
+                    Joined {tenant.created_at ? format(new Date(tenant.created_at), 'MMMM d, yyyy') : 'Recently'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 mt-4">
+                <button 
+                  onClick={() => handleMessageTenant(tenant)}
+                  className="neumorph-button flex-1 flex items-center justify-center"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Message
+                </button>
+                <button className="neumorph-button flex-1 flex items-center justify-center bg-primary text-primary-foreground">
+                  <Home className="h-4 w-4 mr-2" />
+                  View Details
+                </button>
+              </div>
+            </NeumorphicCard>
+          ))}
+        </div>
+      )}
     </DashboardLayout>
   );
 }

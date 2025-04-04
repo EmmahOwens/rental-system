@@ -1,31 +1,44 @@
 
--- Create a table to track tenant-landlord connections
-CREATE TABLE IF NOT EXISTS public.tenant_landlord_connections (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  landlord_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'pending',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  UNIQUE (tenant_id, landlord_id)
+-- Create the tenant_landlord_connections table
+CREATE TABLE tenant_landlord_connections (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID NOT NULL REFERENCES profiles(id),
+  landlord_id UUID NOT NULL REFERENCES profiles(id),
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable Row Level Security
-ALTER TABLE public.tenant_landlord_connections ENABLE ROW LEVEL SECURITY;
+-- Add indices for faster lookups
+CREATE INDEX idx_tenant_landlord_tenant_id ON tenant_landlord_connections(tenant_id);
+CREATE INDEX idx_tenant_landlord_landlord_id ON tenant_landlord_connections(landlord_id);
 
--- Create policies for tenant_landlord_connections
-CREATE POLICY "Tenants can view their own connections"
-  ON public.tenant_landlord_connections
-  FOR SELECT
-  USING (tenant_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid()));
+-- Add RLS policies
+ALTER TABLE tenant_landlord_connections ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Landlords can view their own connections"
-  ON public.tenant_landlord_connections
-  FOR SELECT
-  USING (landlord_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid()));
+-- Allow tenants to see their own connections
+CREATE POLICY tenant_read_own_connections ON tenant_landlord_connections
+  FOR SELECT USING (auth.uid() = tenant_id);
 
--- Add a trigger to update the updated_at column
-CREATE TRIGGER update_tenant_landlord_connections_updated_at
-  BEFORE UPDATE ON public.tenant_landlord_connections
+-- Allow landlords to see their own connections
+CREATE POLICY landlord_read_own_connections ON tenant_landlord_connections
+  FOR SELECT USING (auth.uid() = landlord_id);
+
+-- Allow system to insert new connections
+CREATE POLICY insert_connections ON tenant_landlord_connections
+  FOR INSERT WITH CHECK (true);
+
+-- Function to update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update the timestamp
+CREATE TRIGGER update_tenant_landlord_connections_timestamp
+  BEFORE UPDATE ON tenant_landlord_connections
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION update_timestamp();

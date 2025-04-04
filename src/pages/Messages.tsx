@@ -1,527 +1,410 @@
-import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+
+import React, { useEffect, useState, useRef } from "react";
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useLocation } from "react-router-dom";
-import { getTenantLandlord, getLandlordTenants } from "@/utils/profileUtils";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
+import { MessageSquare, Send, Search, Users, Phone, Video } from "lucide-react";
+import { getTenantLandlords, getLandlordTenants } from "@/utils/profileUtils";
+import { sendMessage, fetchMessages, markMessageAsRead, subscribeToMessages } from "@/utils/messageUtils";
+import { Profile } from "@/integrations/supabase/types";
 
-type Profile = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
-  user_type: string | null;
-  user_id: string;
-  phone: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
+interface Contact extends Profile {
+  connection_id: string;
+  connection_status: string;
+  unread_count?: number;
+}
 
-type Message = {
+interface Message {
   id: string;
   content: string;
   created_at: string;
-  read: boolean | null;
+  read: boolean;
   receiver_id: string;
   sender_id: string;
-  sender_first_name?: string | null;
-  sender_last_name?: string | null;
-  sender_avatar_url?: string | null;
-  sender_user_type?: string | null;
-  receiver_first_name?: string | null;
-  receiver_last_name?: string | null;
-  receiver_avatar_url?: string | null;
-  receiver_user_type?: string | null;
-};
+  sender: Profile;
+  receiver: Profile;
+}
 
 export default function Messages() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const location = useLocation();
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [messageContent, setMessageContent] = useState("");
-  const [chatPartner, setChatPartner] = useState<Profile | null>(null);
-  const [availablePartners, setAvailablePartners] = useState<Profile[]>([]);
-  const [loadingPartners, setLoadingPartners] = useState(true);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
-  const realtimeChannelRef = useRef<any>(null);
+  const isLandlord = currentUser?.role === 'landlord';
 
+  // Fetch contacts based on user role
   useEffect(() => {
-    const specificTenantId = location.state?.tenantId;
-    if (specificTenantId && availablePartners.length > 0) {
-      const tenant = availablePartners.find(p => p.id === specificTenantId);
-      if (tenant) {
-        setChatPartner(tenant);
-      }
-    }
-  }, [location.state, availablePartners]);
-
-  useEffect(() => {
-    const fetchChatPartners = async () => {
+    async function loadContacts() {
       if (!currentUser?.id) return;
       
-      setLoadingPartners(true);
-      
       try {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, user_type")
-          .eq("user_id", currentUser.id)
-          .single();
-          
-        if (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          return;
+        setIsLoading(true);
+        let loadedContacts: Contact[] = [];
+        
+        if (isLandlord) {
+          // Landlords see their tenants
+          loadedContacts = await getLandlordTenants(currentUser.id);
+        } else {
+          // Tenants see their landlords
+          loadedContacts = await getTenantLandlords(currentUser.id);
         }
         
-        let partners: Profile[] = [];
+        setContacts(loadedContacts);
         
-        if (profileData.user_type === 'tenant') {
-          const landlordData = await getTenantLandlord(profileData.id);
-          
-          if (landlordData && landlordData.landlords) {
-            partners = [landlordData.landlords as Profile];
-          }
-        } else if (profileData.user_type === 'landlord') {
-          const tenantsData = await getLandlordTenants(profileData.id);
-          
-          if (tenantsData && tenantsData.length > 0) {
-            partners = tenantsData.map(item => item.tenants as Profile);
-          }
-        }
-        
-        setAvailablePartners(partners);
-        
-        if (!chatPartner && partners.length > 0) {
-          setChatPartner(partners[0]);
+        // Auto-select first contact if available
+        if (loadedContacts.length > 0 && !selectedContact) {
+          setSelectedContact(loadedContacts[0]);
         }
       } catch (error) {
-        console.error("Error finding chat partners:", error);
+        console.error("Error loading contacts:", error);
         toast({
-          title: "Failed to find chat partners",
+          title: "Failed to load contacts",
           description: "Please try again later",
           variant: "destructive",
         });
       } finally {
-        setLoadingPartners(false);
+        setIsLoading(false);
       }
-    };
-    
-    fetchChatPartners();
-  }, [currentUser?.id, toast]);
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const fetchMessages = async () => {
-      if (!currentUser?.id || !chatPartner?.id) return;
-    
-      try {
-        setLoading(true);
-        
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", currentUser.id)
-          .single();
-          
-        if (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          return;
-        }
-        
-        const { data, error } = await supabase
-          .from("messages")
-          .select(`
-            id,
-            content,
-            created_at,
-            read,
-            receiver_id,
-            sender_id,
-            sender:profiles!messages_sender_id_fkey (
-              first_name,
-              last_name,
-              avatar_url,
-              user_type
-            ),
-            receiver:profiles!messages_receiver_id_fkey (
-              first_name,
-              last_name,
-              avatar_url,
-              user_type
-            )
-          `)
-          .or(`and(sender_id.eq.${profileData.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${profileData.id})`)
-          .order('created_at', { ascending: true });
-    
-        if (error) throw error;
-    
-        if (isMounted && data) {
-          const transformedMessages = data.map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            created_at: msg.created_at,
-            read: msg.read,
-            receiver_id: msg.receiver_id,
-            sender_id: msg.sender_id,
-            sender_first_name: msg.sender?.first_name,
-            sender_last_name: msg.sender?.last_name,
-            sender_avatar_url: msg.sender?.avatar_url,
-            sender_user_type: msg.sender?.user_type,
-            receiver_first_name: msg.receiver?.first_name,
-            receiver_last_name: msg.receiver?.last_name,
-            receiver_avatar_url: msg.receiver?.avatar_url,
-            receiver_user_type: msg.receiver?.user_type,
-          }));
-    
-          setMessages(transformedMessages);
-          setTimeout(scrollToBottom, 100);
-          
-          const unreadMessageIds = data
-            .filter(msg => msg.receiver_id === profileData.id && !msg.read)
-            .map(msg => msg.id);
-            
-          if (unreadMessageIds.length > 0) {
-            await supabase
-              .from("messages")
-              .update({ read: true })
-              .in('id', unreadMessageIds);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-        if (isMounted) {
-          toast({
-            title: "Failed to load messages",
-            description: "Please try again later",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchMessages();
-    
-    if (currentUser?.id && chatPartner?.id) {
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-      }
-      
-      const channel = supabase
-        .channel('messages-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `or(and(receiver_id.eq.${currentUser.id},sender_id.eq.${chatPartner.id}),and(receiver_id.eq.${chatPartner.id},sender_id.eq.${currentUser.id}))`
-          },
-          async (payload) => {
-            console.log('New message received:', payload);
-            
-            if (!isMounted) return;
-            
-            try {
-              const { data, error } = await supabase
-                .from("messages")
-                .select(`
-                  *,
-                  sender:profiles!messages_sender_id_fkey(
-                    first_name,
-                    last_name,
-                    avatar_url,
-                    user_type
-                  ),
-                  receiver:profiles!messages_receiver_id_fkey(
-                    first_name,
-                    last_name,
-                    avatar_url,
-                    user_type
-                  )
-                `)
-                .eq('id', payload.new.id)
-                .single();
-                
-              if (error) throw error;
-              
-              if (data && isMounted) {
-                const newMessage = {
-                  id: data.id,
-                  content: data.content,
-                  created_at: data.created_at,
-                  read: data.read,
-                  receiver_id: data.receiver_id,
-                  sender_id: data.sender_id,
-                  sender_first_name: data.sender?.first_name || null,
-                  sender_last_name: data.sender?.last_name || null,
-                  sender_avatar_url: data.sender?.avatar_url || null,
-                  sender_user_type: data.sender?.user_type || null,
-                  receiver_first_name: data.receiver?.first_name || null,
-                  receiver_last_name: data.receiver?.last_name || null,
-                  receiver_avatar_url: data.receiver?.avatar_url || null,
-                  receiver_user_type: data.receiver?.user_type || null,
-                };
-                
-                setMessages(prev => [...prev, newMessage]);
-                
-                if (data.receiver_id === currentUser.id && !data.read) {
-                  await supabase
-                    .from("messages")
-                    .update({ read: true })
-                    .eq('id', data.id);
-                }
-                
-                setTimeout(scrollToBottom, 100);
-              }
-            } catch (err) {
-              console.error('Error processing real-time message:', err);
-            }
-          }
-        )
-        .subscribe();
-      
-      realtimeChannelRef.current = channel;
     }
     
-    return () => {
-      isMounted = false;
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-      }
-    };
-  }, [currentUser?.id, chatPartner?.id, toast]);
-  
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    loadContacts();
+  }, [currentUser, isLandlord, toast]);
 
-  const sendMessage = async () => {
-    if (!messageContent.trim() || !currentUser?.id || !chatPartner?.id) return;
-    
-    setSendingMessage(true);
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", currentUser.id)
-        .single();
+  // Load messages when selected contact changes
+  useEffect(() => {
+    async function loadMessages() {
+      if (!currentUser?.id || !selectedContact?.id) return;
+      
+      try {
+        const loadedMessages = await fetchMessages(currentUser.id, selectedContact.id);
+        setMessages(loadedMessages);
         
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        return;
+        // Mark unread messages as read
+        const unreadMessages = loadedMessages.filter(
+          (msg) => !msg.read && msg.sender_id === selectedContact.id
+        );
+        
+        for (const msg of unreadMessages) {
+          await markMessageAsRead(msg.id);
+        }
+        
+        // Update unread count for the selected contact
+        if (unreadMessages.length > 0) {
+          setContacts((prevContacts) =>
+            prevContacts.map((contact) =>
+              contact.id === selectedContact.id
+                ? { ...contact, unread_count: 0 }
+                : contact
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Error loading messages:", error);
+        toast({
+          title: "Failed to load messages",
+          description: "Please refresh and try again",
+          variant: "destructive",
+        });
       }
+    }
+    
+    loadMessages();
+  }, [currentUser, selectedContact, toast]);
+
+  // Subscribe to new messages
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    
+    const subscription = subscribeToMessages(currentUser.id, (payload) => {
+      const newMessage = payload.new;
       
-      const newMessage = {
-        content: messageContent.trim(),
-        sender_id: profileData.id,
-        receiver_id: chatPartner.id,
-        read: false
-      };
-      
-      const { error } = await supabase
-        .from("messages")
-        .insert(newMessage);
+      // Add the new message to the message list if it belongs to the current conversation
+      if (
+        selectedContact &&
+        ((newMessage.sender_id === currentUser.id && newMessage.receiver_id === selectedContact.id) ||
+          (newMessage.sender_id === selectedContact.id && newMessage.receiver_id === currentUser.id))
+      ) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            ...newMessage,
+            sender: newMessage.sender_id === currentUser.id ? currentUser : selectedContact,
+            receiver: newMessage.receiver_id === currentUser.id ? currentUser : selectedContact,
+          },
+        ]);
         
-      if (error) throw error;
-      
-      setMessageContent("");
+        // Mark message as read if received
+        if (newMessage.sender_id === selectedContact.id) {
+          markMessageAsRead(newMessage.id);
+        }
+      } else if (newMessage.receiver_id === currentUser.id) {
+        // Update unread count for the contact
+        setContacts((prevContacts) =>
+          prevContacts.map((contact) =>
+            contact.id === newMessage.sender_id
+              ? {
+                  ...contact,
+                  unread_count: (contact.unread_count || 0) + 1,
+                }
+              : contact
+          )
+        );
+        
+        // Show toast for new message if not in the current conversation
+        toast({
+          title: "New message",
+          description: `You have a new message from ${
+            contacts.find((c) => c.id === newMessage.sender_id)?.first_name || "someone"
+          }`,
+        });
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentUser, selectedContact, contacts, toast]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !currentUser?.id || !selectedContact?.id) return;
+    
+    try {
+      setIsSending(true);
+      await sendMessage({
+        content: newMessage.trim(),
+        sender_id: currentUser.id,
+        receiver_id: selectedContact.id,
+      });
+      setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
         title: "Failed to send message",
-        description: "Please try again later",
+        description: "Please try again",
         variant: "destructive",
       });
     } finally {
-      setSendingMessage(false);
+      setIsSending(false);
     }
   };
 
-  useEffect(() => {
-    const markMessagesAsRead = async () => {
-      if (!currentUser?.id || messages.length === 0) return;
-      
-      const unreadMessageIds = messages
-        .filter(msg => msg.receiver_id === currentUser.id && !msg.read)
-        .map(msg => msg.id);
-        
-      if (unreadMessageIds.length === 0) return;
-      
-      try {
-        const { error } = await supabase
-          .from("messages")
-          .update({ read: true })
-          .in('id', unreadMessageIds);
-          
-        if (error) throw error;
-        
-        setMessages(prev => 
-          prev.map(msg => 
-            unreadMessageIds.includes(msg.id) 
-              ? { ...msg, read: true } 
-              : msg
-          )
-        );
-      } catch (error) {
-        console.error("Error marking messages as read:", error);
-      }
-    };
-    
-    markMessagesAsRead();
-  }, [messages, currentUser?.id]);
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  if (loading && !chatPartner) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const renderPartnerSelector = () => {
-    if (availablePartners.length <= 1) return null;
-    
-    return (
-      <div className="mb-4 p-3 border-b">
-        <div className="text-sm font-medium mb-2">Select a chat partner:</div>
-        <div className="flex flex-wrap gap-2">
-          {availablePartners.map(partner => (
-            <Button
-              key={partner.id}
-              variant={chatPartner?.id === partner.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setChatPartner(partner)}
-              className="flex items-center gap-2"
-            >
-              <Avatar className="h-5 w-5">
-                <AvatarImage src={partner.avatar_url || `/placeholder.svg`} />
-                <AvatarFallback>
-                  {partner.first_name?.charAt(0) || partner.user_type?.charAt(0) || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <span>
-                {partner.first_name && partner.last_name 
-                  ? `${partner.first_name} ${partner.last_name}` 
-                  : `${partner.user_type?.charAt(0).toUpperCase()}${partner.user_type?.slice(1) || 'User'}`}
-              </span>
-            </Button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  if (!chatPartner) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)]">
-        <h1 className="text-2xl font-bold mb-4">No Chat Partner Available</h1>
-        <p>There are no {currentUser?.role === 'tenant' ? 'landlords' : 'tenants'} available to chat with.</p>
-      </div>
-    );
-  }
+  const filteredContacts = contacts.filter(
+    (contact) =>
+      contact.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.last_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] md:h-[calc(100vh-150px)]">
-      {renderPartnerSelector()}
-      
-      <div className="flex items-center p-3 md:p-4 border-b">
-        <Avatar className="h-8 w-8 md:h-10 md:w-10 mr-2 md:mr-3">
-          <AvatarImage src={chatPartner.avatar_url || `/placeholder.svg`} />
-          <AvatarFallback>
-            {chatPartner.first_name?.charAt(0) || chatPartner.user_type?.charAt(0) || '?'}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-base md:text-lg font-semibold">
-            {chatPartner.first_name && chatPartner.last_name 
-              ? `${chatPartner.first_name} ${chatPartner.last_name}` 
-              : `${chatPartner.user_type?.charAt(0).toUpperCase()}${chatPartner.user_type?.slice(1) || 'User'}`}
+    <DashboardLayout>
+      <div className="flex flex-col h-[calc(100vh-4rem-2.5rem)]">
+        <div className="mb-6 flex justify-between items-center">
+          <h1 className="text-3xl font-bold flex items-center">
+            <MessageSquare className="mr-2 h-7 w-7 text-primary" /> 
+            Messages
           </h1>
-          <p className="text-xs md:text-sm text-muted-foreground capitalize">{chatPartner.user_type || 'User'}</p>
+        </div>
+
+        <div className="flex flex-1 gap-6 h-full overflow-hidden">
+          {/* Contacts Sidebar */}
+          <NeumorphicCard className="w-full md:w-80 flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search contacts..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 neumorph-input"
+                />
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-2">
+              {isLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
+                </div>
+              ) : filteredContacts.length === 0 ? (
+                <div className="text-center p-6">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <h3 className="font-medium mb-1">No contacts found</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {searchTerm ? "Try a different search term" : "You don't have any contacts yet"}
+                  </p>
+                </div>
+              ) : (
+                filteredContacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className={`flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all ${
+                      selectedContact?.id === contact.id
+                        ? "neumorph-inset bg-primary/5"
+                        : "neumorph hover:shadow-md"
+                    }`}
+                    onClick={() => setSelectedContact(contact)}
+                  >
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={contact.avatar_url || ""} />
+                      <AvatarFallback>
+                        {(contact.first_name?.[0] || "") + (contact.last_name?.[0] || "")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <h3 className="font-medium truncate">
+                          {contact.first_name} {contact.last_name}
+                        </h3>
+                        {(contact.unread_count || 0) > 0 && (
+                          <span className="bg-primary text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                            {contact.unread_count}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {isLandlord ? 'Tenant' : 'Landlord'}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </NeumorphicCard>
+
+          {/* Chat Area */}
+          <NeumorphicCard className="flex-1 flex flex-col h-full overflow-hidden">
+            {selectedContact ? (
+              <>
+                {/* Chat Header */}
+                <div className="p-4 border-b flex justify-between items-center">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10 mr-3">
+                      <AvatarImage src={selectedContact.avatar_url || ""} />
+                      <AvatarFallback>
+                        {(selectedContact.first_name?.[0] || "") +
+                          (selectedContact.last_name?.[0] || "")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-medium">
+                        {selectedContact.first_name} {selectedContact.last_name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {isLandlord ? 'Tenant' : 'Landlord'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="icon" variant="ghost" className="neumorph h-9 w-9">
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="neumorph h-9 w-9">
+                      <Video className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 neumorph-inset">
+                  <div className="space-y-4">
+                    {messages.length === 0 ? (
+                      <div className="text-center p-6">
+                        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                        <h3 className="font-medium mb-1">No messages yet</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Send a message to start the conversation
+                        </p>
+                      </div>
+                    ) : (
+                      messages.map((message) => {
+                        const isSentByCurrentUser = message.sender_id === currentUser?.id;
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={`max-w-[75%] px-4 py-3 rounded-2xl ${
+                                isSentByCurrentUser
+                                  ? "bg-primary text-white rounded-tr-none neumorph"
+                                  : "bg-background rounded-tl-none neumorph-inset"
+                              }`}
+                            >
+                              <p>{message.content}</p>
+                              <p
+                                className={`text-xs mt-1 ${
+                                  isSentByCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                                }`}
+                              >
+                                {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+
+                {/* Message Input */}
+                <div className="p-4 border-t">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="neumorph-input"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={isSending || !newMessage.trim()}
+                      className="neumorph-button bg-primary text-primary-foreground"
+                    >
+                      {isSending ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center p-6">
+                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
+                  <p className="text-muted-foreground mb-4">
+                    Select a contact to start messaging
+                  </p>
+                </div>
+              </div>
+            )}
+          </NeumorphicCard>
         </div>
       </div>
-      
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <p className="text-muted-foreground">No messages yet</p>
-            <p className="text-xs md:text-sm">Start the conversation by sending a message</p>
-          </div>
-        ) : (
-          messages.map((message) => {
-            const isCurrentUserSender = message.sender_id === currentUser?.id;
-            
-            return (
-              <div 
-                key={message.id} 
-                className={`flex ${isCurrentUserSender ? 'justify-end' : 'justify-start'}`}
-              >
-                <Card className={`max-w-[90%] md:max-w-[80%] p-2 md:p-3 text-sm md:text-base ${isCurrentUserSender ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                  <p className="break-words">{message.content}</p>
-                  <p className={`text-[10px] md:text-xs mt-1 ${isCurrentUserSender ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                    {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    {isCurrentUserSender && message.read && ' • Read'}
-                  </p>
-                </Card>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="p-3 md:p-4 border-t">
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage();
-          }}
-          className="flex gap-2"
-        >
-          <Input
-            value={messageContent}
-            onChange={(e) => setMessageContent(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Type a message..."
-            disabled={sendingMessage}
-            className="flex-1 text-sm md:text-base h-9 md:h-10"
-          />
-          <Button 
-            type="submit" 
-            disabled={!messageContent.trim() || sendingMessage}
-            size={isMobile ? "sm" : "icon"}
-            className="h-9 md:h-10"
-          >
-            {sendingMessage ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }
