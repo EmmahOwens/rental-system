@@ -1,13 +1,25 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Profile } from './profileUtils';
 
 export interface TenantLandlordConnection {
   id: string;
   tenant_id: string;
   landlord_id: string;
   status: string;
+  unread_count: number;
   created_at: string;
   updated_at?: string;
+}
+
+export interface TenantWithConnection extends Profile {
+  connection_id: string;
+  unread_count: number;
+}
+
+export interface LandlordWithConnection extends Profile {
+  connection_id: string;
+  unread_count: number;
 }
 
 /**
@@ -108,4 +120,74 @@ export async function getConnection(tenantId: string, landlordId: string) {
   }
   
   return data as TenantLandlordConnection | null;
+}
+
+/**
+ * Get a connection by ID
+ */
+export async function getConnectionById(connectionId: string) {
+  const { data, error } = await supabase
+    .from('tenant_landlord_connections')
+    .select('*, tenant:profiles!tenant_id(*), landlord:profiles!landlord_id(*)')
+    .eq('id', connectionId)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching connection by ID:', error);
+    throw error;
+  }
+  
+  return data;
+}
+
+/**
+ * Get all tenants for a landlord with their connection details
+ */
+export async function getLandlordTenants(landlordId: string): Promise<TenantWithConnection[]> {
+  const { data, error } = await supabase
+    .from('tenant_landlord_connections')
+    .select(`
+      id,
+      unread_count,
+      tenant:profiles!tenant_id(*)
+    `)
+    .eq('landlord_id', landlordId)
+    .eq('status', 'active');
+  
+  if (error) {
+    console.error('Error fetching landlord tenants:', error);
+    throw error;
+  }
+  
+  return data.map(item => ({
+    ...item.tenant,
+    connection_id: item.id,
+    unread_count: item.unread_count || 0
+  })) as TenantWithConnection[];
+}
+
+/**
+ * Get all landlords for a tenant with their connection details
+ */
+export async function getTenantLandlords(tenantId: string): Promise<LandlordWithConnection[]> {
+  const { data, error } = await supabase
+    .from('tenant_landlord_connections')
+    .select(`
+      id,
+      unread_count,
+      landlord:profiles!landlord_id(*)
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active');
+  
+  if (error) {
+    console.error('Error fetching tenant landlords:', error);
+    throw error;
+  }
+  
+  return data.map(item => ({
+    ...item.landlord,
+    connection_id: item.id,
+    unread_count: item.unread_count || 0
+  })) as LandlordWithConnection[];
 }

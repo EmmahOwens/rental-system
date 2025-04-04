@@ -7,8 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Message, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead } from "@/utils/messageUtils";
-import { getTenantLandlords, getLandlordTenants } from "@/utils/profileUtils";
+import { 
+  Message, 
+  getMessages, 
+  sendMessage, 
+  subscribeToMessages, 
+  markMessagesAsRead,
+  updateConnectionUnreadCount
+} from "@/utils/messageUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatInterfaceProps {
   connectionId: string;
@@ -23,6 +30,7 @@ interface ChatInterfaceProps {
 export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,24 +40,45 @@ export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
     if (!connectionId || !profile) return;
 
     const fetchMessages = async () => {
-      const fetchedMessages = await getMessages(profile.id, otherUser.id);
-      setMessages(fetchedMessages);
-      await markMessagesAsRead(connectionId, profile.id);
+      try {
+        const fetchedMessages = await getMessages(profile.id, otherUser.id);
+        setMessages(fetchedMessages);
+        await markMessagesAsRead(connectionId, profile.id);
+        await updateConnectionUnreadCount(connectionId, 0);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        toast({
+          title: "Error loading messages",
+          description: "There was a problem loading your messages",
+          variant: "destructive",
+        });
+      }
     };
 
     fetchMessages();
 
-    const subscription = subscribeToMessages(profile.id, (message) => {
-      setMessages((prev) => [...prev, message]);
-      if (message.sender_id !== profile.id) {
+    const subscription = subscribeToMessages(profile.id, (payload) => {
+      const newMessage = payload.new;
+      
+      // Only add the message if it's for this connection
+      if (newMessage.connection_id === connectionId) {
+        setMessages((prev) => [...prev, {
+          ...newMessage,
+          sender: newMessage.sender_id === profile.id ? profile : otherUser,
+          receiver: newMessage.receiver_id === profile.id ? profile : otherUser
+        }]);
+      }
+      
+      if (newMessage.sender_id !== profile.id && newMessage.connection_id === connectionId) {
         markMessagesAsRead(connectionId, profile.id);
+        updateConnectionUnreadCount(connectionId, 0);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [connectionId, profile, otherUser.id]);
+  }, [connectionId, profile, otherUser.id, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,11 +93,17 @@ export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
       await sendMessage({
         content: newMessage.trim(),
         sender_id: profile.id,
-        receiver_id: otherUser.id
+        receiver_id: otherUser.id,
+        connection_id: connectionId
       });
       setNewMessage("");
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast({
+        title: "Message not sent",
+        description: "Your message could not be sent. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -92,25 +127,31 @@ export function ChatInterface({ connectionId, otherUser }: ChatInterfaceProps) {
       <CardContent className="flex-1 flex flex-col p-0">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender_id === profile?.id ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[80%] px-4 py-2 rounded-lg ${
-                    message.sender_id === profile?.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
-                >
-                  <p>{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
+            {messages.length === 0 ? (
+              <div className="text-center p-6 text-muted-foreground">
+                <p>No messages yet. Start the conversation!</p>
               </div>
-            ))}
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender_id === profile?.id ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                      message.sender_id === profile?.id
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    }`}
+                  >
+                    <p>{message.content}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>

@@ -2,55 +2,60 @@
 import React, { useEffect, useState, useRef } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Send, Search, Users, Phone, Video } from "lucide-react";
-import { getTenantLandlords, getLandlordTenants, Profile, TenantWithConnection } from "@/utils/profileUtils";
-import { getMessages, markMessageAsRead, subscribeToMessages, sendMessage } from "@/utils/messageUtils";
+import { 
+  getTenantLandlords, 
+  getLandlordTenants, 
+  TenantWithConnection,
+  LandlordWithConnection 
+} from "@/utils/connectionUtils";
+import { 
+  Message, 
+  getMessages, 
+  markMessagesAsRead, 
+  subscribeToMessages, 
+  sendMessage,
+  updateConnectionUnreadCount 
+} from "@/utils/messageUtils";
 
-interface Message {
-  id: string;
-  content: string;
-  created_at: string;
-  read: boolean;
-  receiver_id: string;
-  sender_id: string;
-  sender: Profile;
-  receiver: Profile;
-}
+type ContactWithConnection = TenantWithConnection | LandlordWithConnection;
 
 export default function Messages() {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
+  const { profile } = useProfile();
   const { toast } = useToast();
-  const [contacts, setContacts] = useState<TenantWithConnection[]>([]);
-  const [selectedContact, setSelectedContact] = useState<TenantWithConnection | null>(null);
+  const [contacts, setContacts] = useState<ContactWithConnection[]>([]);
+  const [selectedContact, setSelectedContact] = useState<ContactWithConnection | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isLandlord = currentUser?.role === 'landlord';
+  const isLandlord = user?.role === 'landlord';
 
   // Fetch contacts based on user role
   useEffect(() => {
     async function loadContacts() {
-      if (!currentUser?.id) return;
+      if (!profile?.id) return;
       
       try {
         setIsLoading(true);
-        let loadedContacts: TenantWithConnection[] = [];
+        let loadedContacts: ContactWithConnection[] = [];
         
         if (isLandlord) {
           // Landlords see their tenants
-          loadedContacts = await getLandlordTenants(currentUser.id);
+          loadedContacts = await getLandlordTenants(profile.id);
         } else {
           // Tenants see their landlords
-          loadedContacts = await getTenantLandlords(currentUser.id);
+          loadedContacts = await getTenantLandlords(profile.id);
         }
         
         setContacts(loadedContacts);
@@ -72,28 +77,23 @@ export default function Messages() {
     }
     
     loadContacts();
-  }, [currentUser, isLandlord, toast, selectedContact]);
+  }, [profile?.id, isLandlord, toast, selectedContact]);
 
   // Load messages when selected contact changes
   useEffect(() => {
     async function loadMessages() {
-      if (!currentUser?.id || !selectedContact?.id) return;
+      if (!profile?.id || !selectedContact?.id) return;
       
       try {
-        const loadedMessages = await getMessages(currentUser.id, selectedContact.id);
+        const loadedMessages = await getMessages(profile.id, selectedContact.id);
         setMessages(loadedMessages);
         
-        // Mark unread messages as read
-        const unreadMessages = loadedMessages.filter(
-          (msg) => !msg.read && msg.sender_id === selectedContact.id
-        );
-        
-        for (const msg of unreadMessages) {
-          await markMessageAsRead(msg.id);
-        }
-        
-        // Update unread count for the selected contact
-        if (unreadMessages.length > 0) {
+        // Mark messages as read
+        if (selectedContact.connection_id) {
+          await markMessagesAsRead(selectedContact.connection_id, profile.id);
+          await updateConnectionUnreadCount(selectedContact.connection_id, 0);
+          
+          // Update unread count for the selected contact
           setContacts((prevContacts) =>
             prevContacts.map((contact) =>
               contact.id === selectedContact.id
@@ -113,61 +113,64 @@ export default function Messages() {
     }
     
     loadMessages();
-  }, [currentUser, selectedContact, toast]);
+  }, [profile?.id, selectedContact, toast]);
 
   // Subscribe to new messages
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!profile?.id) return;
     
-    const subscription = subscribeToMessages(currentUser.id, (payload: any) => {
+    const subscription = subscribeToMessages(profile.id, (payload: any) => {
       const newMessage = payload.new;
       
       // Add the new message to the message list if it belongs to the current conversation
       if (
         selectedContact &&
-        ((newMessage.sender_id === currentUser.id && newMessage.receiver_id === selectedContact.id) ||
-          (newMessage.sender_id === selectedContact.id && newMessage.receiver_id === currentUser.id))
+        ((newMessage.sender_id === profile.id && newMessage.receiver_id === selectedContact.id) ||
+          (newMessage.sender_id === selectedContact.id && newMessage.receiver_id === profile.id))
       ) {
         setMessages((prevMessages) => [
           ...prevMessages,
           {
             ...newMessage,
-            sender: newMessage.sender_id === currentUser.id ? currentUser : selectedContact,
-            receiver: newMessage.receiver_id === currentUser.id ? currentUser : selectedContact,
+            sender: newMessage.sender_id === profile.id ? profile : selectedContact,
+            receiver: newMessage.receiver_id === profile.id ? profile : selectedContact,
           },
         ]);
         
-        // Mark message as read if received
-        if (newMessage.sender_id === selectedContact.id) {
-          markMessageAsRead(newMessage.id);
+        // Mark message as read if received in current conversation
+        if (newMessage.sender_id === selectedContact.id && selectedContact.connection_id) {
+          markMessagesAsRead(selectedContact.connection_id, profile.id);
+          updateConnectionUnreadCount(selectedContact.connection_id, 0);
         }
-      } else if (newMessage.receiver_id === currentUser.id) {
-        // Update unread count for the contact
+      } else {
+        // Update unread count for contacts not in current conversation
         setContacts((prevContacts) =>
-          prevContacts.map((contact) =>
-            contact.id === newMessage.sender_id
-              ? {
-                  ...contact,
-                  unread_count: (contact.unread_count || 0) + 1,
-                }
-              : contact
-          )
+          prevContacts.map((contact) => {
+            if (contact.id === newMessage.sender_id && newMessage.connection_id === contact.connection_id) {
+              return {
+                ...contact,
+                unread_count: (contact.unread_count || 0) + 1,
+              };
+            }
+            return contact;
+          })
         );
         
         // Show toast for new message if not in the current conversation
-        toast({
-          title: "New message",
-          description: `You have a new message from ${
-            contacts.find((c) => c.id === newMessage.sender_id)?.first_name || "someone"
-          }`,
-        });
+        const sender = contacts.find(c => c.id === newMessage.sender_id);
+        if (sender) {
+          toast({
+            title: "New message",
+            description: `You have a new message from ${sender.first_name || "someone"}`,
+          });
+        }
       }
     });
     
     return () => {
       subscription.unsubscribe();
     };
-  }, [currentUser, selectedContact, contacts, toast]);
+  }, [profile?.id, selectedContact, contacts, toast]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -175,14 +178,15 @@ export default function Messages() {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUser?.id || !selectedContact?.id) return;
+    if (!newMessage.trim() || !profile?.id || !selectedContact?.id) return;
     
     try {
       setIsSending(true);
       await sendMessage({
         content: newMessage.trim(),
-        sender_id: currentUser.id,
+        sender_id: profile.id,
         receiver_id: selectedContact.id,
+        connection_id: selectedContact.connection_id
       });
       setNewMessage("");
     } catch (error) {
@@ -263,7 +267,7 @@ export default function Messages() {
                         <h3 className="font-medium truncate">
                           {contact.first_name} {contact.last_name}
                         </h3>
-                        {(contact.unread_count || 0) > 0 && (
+                        {(contact.unread_count > 0) && (
                           <span className="bg-primary text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
                             {contact.unread_count}
                           </span>
@@ -326,7 +330,7 @@ export default function Messages() {
                         </div>
                       ) : (
                         messages.map((message) => {
-                          const isSentByCurrentUser = message.sender_id === currentUser?.id;
+                          const isSentByCurrentUser = message.sender_id === profile?.id;
                           return (
                             <div
                               key={message.id}
