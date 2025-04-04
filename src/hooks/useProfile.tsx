@@ -1,18 +1,8 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
-interface Profile {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  address?: string;
-  avatar_url?: string;
-  user_type: 'tenant' | 'landlord';
-  created_at: string;
-}
+import { Profile } from "@/utils/profileUtils";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -48,7 +38,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
-      setProfile(data);
+      // Cast the user_type to ensure it's either 'tenant' or 'landlord'
+      const typedData = {
+        ...data,
+        user_type: data.user_type as 'tenant' | 'landlord'
+      };
+
+      setProfile(typedData as Profile);
     } catch (err) {
       console.error("Error fetching profile:", err);
       setError(err instanceof Error ? err : new Error(String(err)));

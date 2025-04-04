@@ -94,69 +94,88 @@ export async function findLandlordForTenant() {
  * Get a tenant's landlord
  */
 export async function getTenantLandlord(tenantId: string) {
-  const { data, error } = await supabase
-    .from('tenant_landlord_connections')
-    .select(`
-      *,
-      landlord:profiles!landlord_id(*)
-    `)
-    .eq('tenant_id', tenantId)
-    .single();
-  
-  if (error) {
-    console.error('Error fetching tenant landlord:', error);
+  try {
+    const { data, error } = await supabase
+      .from('tenant_landlord_connections')
+      .select(`
+        *,
+        landlord:profiles!landlord_id(*)
+      `)
+      .eq('tenant_id', tenantId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching tenant landlord:', error);
+      throw error;
+    }
+    
+    return data.landlord as Profile;
+  } catch (error) {
+    console.error('Error in getTenantLandlord:', error);
     throw error;
   }
-  
-  return data.landlord as Profile;
 }
 
 /**
  * Get all tenants for a landlord
  */
 export async function getLandlordTenants(landlordId: string) {
-  const { data, error } = await supabase
-    .from('tenant_landlord_connections')
-    .select(`
-      *,
-      tenant:profiles!tenant_id(*)
-    `)
-    .eq('landlord_id', landlordId);
-  
-  if (error) {
-    console.error('Error fetching landlord tenants:', error);
+  try {
+    const { data, error } = await supabase
+      .from('tenant_landlord_connections')
+      .select(`
+        *,
+        tenant:profiles!tenant_id(*)
+      `)
+      .eq('landlord_id', landlordId);
+    
+    if (error) {
+      console.error('Error fetching landlord tenants:', error);
+      throw error;
+    }
+    
+    return data.map(connection => {
+      return {
+        ...connection.tenant,
+        connection_id: connection.id,
+        connection_status: connection.status
+      } as TenantWithConnection;
+    });
+  } catch (error) {
+    console.error('Error in getLandlordTenants:', error);
     throw error;
   }
-  
-  return data.map(connection => ({
-    ...connection.tenant,
-    connection_id: connection.id,
-    connection_status: connection.status
-  })) as TenantWithConnection[];
 }
 
 /**
  * Get all landlords for a tenant
  */
 export async function getTenantLandlords(tenantId: string) {
-  const { data, error } = await supabase
-    .from('tenant_landlord_connections')
-    .select(`
-      *,
-      landlord:profiles!landlord_id(*)
-    `)
-    .eq('tenant_id', tenantId);
-  
-  if (error) {
-    console.error('Error fetching tenant landlords:', error);
+  try {
+    const { data, error } = await supabase
+      .from('tenant_landlord_connections')
+      .select(`
+        *,
+        landlord:profiles!landlord_id(*)
+      `)
+      .eq('tenant_id', tenantId);
+    
+    if (error) {
+      console.error('Error fetching tenant landlords:', error);
+      throw error;
+    }
+    
+    return data.map(connection => {
+      return {
+        ...connection.landlord,
+        connection_id: connection.id,
+        connection_status: connection.status
+      } as TenantWithConnection;
+    });
+  } catch (error) {
+    console.error('Error in getTenantLandlords:', error);
     throw error;
   }
-  
-  return data.map(connection => ({
-    ...connection.landlord,
-    connection_id: connection.id,
-    connection_status: connection.status
-  })) as TenantWithConnection[];
 }
 
 /**
