@@ -55,7 +55,18 @@ export const createProperty = async (
     return {
       id: `mock-${Date.now()}`,
       landlord_id: landlordId,
-      ...propertyData,
+      name: propertyData.name,
+      address: propertyData.address,
+      city: propertyData.city,
+      state: propertyData.state,
+      zip: propertyData.zip,
+      bathrooms: propertyData.bathrooms,
+      bedrooms: propertyData.bedrooms,
+      monthly_rent: propertyData.monthly_rent,
+      property_type: propertyData.property_type,
+      description: propertyData.description || "",
+      image_url: propertyData.image_url,
+      square_feet: propertyData.square_feet,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -78,12 +89,12 @@ export const updateProperty = async (
       name: propertyData.name || 'Property Name',
       address: propertyData.address || '123 Main St',
       city: propertyData.city || 'City',
+      state: propertyData.state || 'State',
+      zip: propertyData.zip || '12345',
       property_type: propertyData.property_type || 'apartment',
       description: propertyData.description,
       bathrooms: propertyData.bathrooms || 2,
       bedrooms: propertyData.bedrooms || 2,
-      state: propertyData.state || 'State',
-      zip: propertyData.zip || '12345',
       monthly_rent: propertyData.monthly_rent || 1000,
       image_url: propertyData.image_url,
       square_feet: propertyData.square_feet,
@@ -108,7 +119,7 @@ export const getLandlordProperties = async (landlordId: string): Promise<Propert
       return [];
     }
     
-    // Add property_type field to each property
+    // Add property_type field to each property if not already set
     return data.map(property => ({
       ...property,
       property_type: property.property_type || 'apartment'
@@ -132,7 +143,13 @@ export const createPropertyUnit = async (
     return {
       id: `mock-${Date.now()}`,
       property_id: propertyId,
-      ...unitData,
+      unit_number: unitData.unit_number,
+      bedrooms: unitData.bedrooms,
+      bathrooms: unitData.bathrooms,
+      rent_amount: unitData.rent_amount,
+      size_sqft: unitData.size_sqft,
+      status: unitData.status,
+      tenant_id: unitData.tenant_id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

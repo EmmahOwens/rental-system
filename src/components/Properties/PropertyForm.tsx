@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +25,7 @@ import {
 import { createProperty, updateProperty } from "@/utils/propertyUtils";
 import { useToast } from "@/components/ui/use-toast";
 
+// Updated schema to include all required fields from Property type
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Property name must be at least 2 characters.",
@@ -34,8 +36,23 @@ const formSchema = z.object({
   city: z.string().min(2, {
     message: "City must be at least 2 characters.",
   }),
+  state: z.string().min(2, {
+    message: "State must be at least 2 characters.",
+  }),
+  zip: z.string().min(5, {
+    message: "Zip code must be at least 5 characters.",
+  }),
   property_type: z.string({
     required_error: "Please select a property type",
+  }),
+  bedrooms: z.coerce.number().min(0, {
+    message: "Bedrooms must be 0 or more.",
+  }),
+  bathrooms: z.coerce.number().min(0, {
+    message: "Bathrooms must be 0 or more.",
+  }),
+  monthly_rent: z.coerce.number().min(0, {
+    message: "Monthly rent must be 0 or more.",
   }),
   description: z.string().optional(),
 });
@@ -57,7 +74,12 @@ export function PropertyForm({ landlordId, property, onSuccess }: PropertyFormPr
       name: property?.name || "",
       address: property?.address || "",
       city: property?.city || "",
+      state: property?.state || "",
+      zip: property?.zip || "",
       property_type: property?.property_type || "",
+      bedrooms: property?.bedrooms || 0,
+      bathrooms: property?.bathrooms || 0,
+      monthly_rent: property?.monthly_rent || 0,
       description: property?.description || "",
     },
   });
@@ -70,12 +92,17 @@ export function PropertyForm({ landlordId, property, onSuccess }: PropertyFormPr
       if (isEditing) {
         result = await updateProperty(property.id, values);
       } else {
-        // Fix: Pass the values as expected by the createProperty function
+        // Now passing all required fields to createProperty
         result = await createProperty(landlordId, {
           name: values.name,
           address: values.address,
           city: values.city,
+          state: values.state,
+          zip: values.zip,
           property_type: values.property_type,
+          bedrooms: values.bedrooms,
+          bathrooms: values.bathrooms,
+          monthly_rent: values.monthly_rent,
           description: values.description || "",
         });
       }
@@ -147,19 +174,93 @@ export function PropertyForm({ landlordId, property, onSuccess }: PropertyFormPr
           )}
         />
         
-        <FormField
-          control={form.control}
-          name="city"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>City</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. Kampala" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Kampala" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="state"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>State/Province</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Central" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="zip"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Zip/Postal Code</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. 10001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="bedrooms"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bedrooms</FormLabel>
+                <FormControl>
+                  <Input type="number" min="0" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="bathrooms"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bathrooms</FormLabel>
+                <FormControl>
+                  <Input type="number" min="0" step="0.5" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="monthly_rent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Monthly Rent</FormLabel>
+                <FormControl>
+                  <Input type="number" min="0" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
         <FormField
           control={form.control}
