@@ -50,36 +50,11 @@ export async function sendMessage(messageData: MessageInput) {
  */
 export async function getMessages(user1Id: string, user2Id: string) {
   try {
-    // Try to find a connection between the users
-    const { data: connection, error: connectionError } = await supabase
-      .from('tenant_landlord_connections')
-      .select('id')
-      .or(`tenant_id.eq.${user1Id},landlord_id.eq.${user1Id}`)
-      .or(`tenant_id.eq.${user2Id},landlord_id.eq.${user2Id}`)
-      .maybeSingle();
-    
-    if (connectionError || !connection) {
-      console.error('Error finding connection:', connectionError);
-      // Fallback to the old method if no connection is found
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*, sender:profiles!sender_id(*), receiver:profiles!receiver_id(*)')
-        .or(`and(sender_id.eq.${user1Id},receiver_id.eq.${user2Id}),and(sender_id.eq.${user2Id},receiver_id.eq.${user1Id})`)
-        .order('created_at', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching messages:', error);
-        throw error;
-      }
-      
-      return data as Message[];
-    }
-    
-    // If we found a connection, use it to fetch messages
+    // Since tenant_landlord_connections table doesn't exist yet, fall back to direct query
     const { data, error } = await supabase
       .from('messages')
       .select('*, sender:profiles!sender_id(*), receiver:profiles!receiver_id(*)')
-      .eq('connection_id', connection.id)
+      .or(`and(sender_id.eq.${user1Id},receiver_id.eq.${user2Id}),and(sender_id.eq.${user2Id},receiver_id.eq.${user1Id})`)
       .order('created_at', { ascending: true });
     
     if (error) {
@@ -117,15 +92,15 @@ export async function markMessageAsRead(messageId: string) {
 }
 
 /**
- * Mark all messages as read for a receiver in a connection
+ * Mark all messages as read for a receiver
  */
-export async function markMessagesAsRead(connectionId: string, receiverId: string) {
+export async function markMessagesAsRead(senderId: string, receiverId: string) {
   try {
     const { error } = await supabase
       .from('messages')
       .update({ read: true })
+      .eq('sender_id', senderId)
       .eq('receiver_id', receiverId)
-      .eq('connection_id', connectionId)
       .eq('read', false);
     
     if (error) {
@@ -158,15 +133,15 @@ export function subscribeToMessages(userId: string, callback: (payload: any) => 
 }
 
 /**
- * Get unread message count for a connection
+ * Get unread message count for a receiver
  */
-export async function getUnreadMessageCount(connectionId: string, userId: string) {
+export async function getUnreadMessageCount(senderId: string, receiverId: string) {
   try {
     const { count, error } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true })
-      .eq('connection_id', connectionId)
-      .eq('receiver_id', userId)
+      .eq('sender_id', senderId)
+      .eq('receiver_id', receiverId)
       .eq('read', false);
     
     if (error) {
@@ -181,24 +156,8 @@ export async function getUnreadMessageCount(connectionId: string, userId: string
   }
 }
 
-/**
- * Update unread count in connection
- */
+// Mock function to update unread count in connection
 export async function updateConnectionUnreadCount(connectionId: string, count: number) {
-  try {
-    const { error } = await supabase
-      .from('tenant_landlord_connections')
-      .update({ unread_count: count })
-      .eq('id', connectionId);
-    
-    if (error) {
-      console.error('Error updating connection unread count:', error);
-      throw error;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in updateConnectionUnreadCount:', error);
-    throw error;
-  }
+  console.log(`Mock: Updating connection ${connectionId} unread count to ${count}`);
+  return true;
 }

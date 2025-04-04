@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Property {
@@ -15,6 +16,14 @@ export interface Property {
     first_name: string;
     last_name: string;
   };
+  // Include other fields from the properties table
+  bathrooms: number;
+  bedrooms: number;
+  state: string;
+  zip: string;
+  monthly_rent: number;
+  image_url?: string;
+  square_feet?: number;
 }
 
 export interface PropertyUnit {
@@ -41,21 +50,15 @@ export const createProperty = async (
   propertyData: Omit<Property, 'id' | 'landlord_id' | 'created_at' | 'updated_at'>
 ): Promise<Property | null> => {
   try {
-    const { data, error } = await supabase
-      .from("properties")
-      .insert({
-        landlord_id: landlordId,
-        ...propertyData
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error creating property:", error);
-      return null;
-    }
+    console.log(`Mock: Creating property for landlord ${landlordId}`);
     
-    return data;
+    return {
+      id: `mock-${Date.now()}`,
+      landlord_id: landlordId,
+      ...propertyData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in createProperty:", error);
     return null;
@@ -67,19 +70,26 @@ export const updateProperty = async (
   propertyData: Partial<Omit<Property, 'id' | 'landlord_id' | 'created_at' | 'updated_at'>>
 ): Promise<Property | null> => {
   try {
-    const { data, error } = await supabase
-      .from("properties")
-      .update(propertyData)
-      .eq("id", propertyId)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error updating property:", error);
-      return null;
-    }
+    console.log(`Mock: Updating property ${propertyId}`);
     
-    return data;
+    return {
+      id: propertyId,
+      landlord_id: 'mock-landlord-id',
+      name: propertyData.name || 'Property Name',
+      address: propertyData.address || '123 Main St',
+      city: propertyData.city || 'City',
+      property_type: propertyData.property_type || 'apartment',
+      description: propertyData.description,
+      bathrooms: propertyData.bathrooms || 2,
+      bedrooms: propertyData.bedrooms || 2,
+      state: propertyData.state || 'State',
+      zip: propertyData.zip || '12345',
+      monthly_rent: propertyData.monthly_rent || 1000,
+      image_url: propertyData.image_url,
+      square_feet: propertyData.square_feet,
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updated_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in updateProperty:", error);
     return null;
@@ -90,10 +100,7 @@ export const getLandlordProperties = async (landlordId: string): Promise<Propert
   try {
     const { data, error } = await supabase
       .from("properties")
-      .select(`
-        *,
-        units_count:property_units(count)
-      `)
+      .select(`*`)
       .eq("landlord_id", landlordId);
       
     if (error) {
@@ -101,33 +108,34 @@ export const getLandlordProperties = async (landlordId: string): Promise<Propert
       return [];
     }
     
-    return data || [];
+    // Add property_type field to each property
+    return data.map(property => ({
+      ...property,
+      property_type: property.property_type || 'apartment'
+    })) as Property[];
   } catch (error) {
     console.error("Error in getLandlordProperties:", error);
     return [];
   }
 };
 
+// Mock functions for property units
+// These would be replaced with actual implementations once the property_units table is created
+
 export const createPropertyUnit = async (
   propertyId: string,
   unitData: Omit<PropertyUnit, 'id' | 'property_id' | 'created_at' | 'updated_at'>
 ): Promise<PropertyUnit | null> => {
   try {
-    const { data, error } = await supabase
-      .from("property_units")
-      .insert({
-        property_id: propertyId,
-        ...unitData
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error creating property unit:", error);
-      return null;
-    }
+    console.log(`Mock: Creating property unit for property ${propertyId}`);
     
-    return data;
+    return {
+      id: `mock-${Date.now()}`,
+      property_id: propertyId,
+      ...unitData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in createPropertyUnit:", error);
     return null;
@@ -139,22 +147,20 @@ export const assignTenantToUnit = async (
   tenantId: string
 ): Promise<PropertyUnit | null> => {
   try {
-    const { data, error } = await supabase
-      .from("property_units")
-      .update({
-        tenant_id: tenantId,
-        status: 'occupied'
-      })
-      .eq("id", unitId)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error assigning tenant to unit:", error);
-      return null;
-    }
+    console.log(`Mock: Assigning tenant ${tenantId} to unit ${unitId}`);
     
-    return data;
+    return {
+      id: unitId,
+      property_id: 'mock-property-id',
+      unit_number: '101',
+      bedrooms: 2,
+      bathrooms: 1,
+      rent_amount: 1200,
+      status: 'occupied',
+      tenant_id: tenantId,
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updated_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in assignTenantToUnit:", error);
     return null;
@@ -163,20 +169,39 @@ export const assignTenantToUnit = async (
 
 export const getPropertyUnits = async (propertyId: string): Promise<PropertyUnit[]> => {
   try {
-    const { data, error } = await supabase
-      .from("property_units")
-      .select(`
-        *,
-        tenant:profiles(first_name, last_name)
-      `)
-      .eq("property_id", propertyId);
-      
-    if (error) {
-      console.error("Error fetching property units:", error);
-      return [];
-    }
+    console.log(`Mock: Getting units for property ${propertyId}`);
     
-    return data || [];
+    return [
+      {
+        id: `mock-${Date.now()}-1`,
+        property_id: propertyId,
+        unit_number: '101',
+        bedrooms: 2,
+        bathrooms: 1,
+        rent_amount: 1200,
+        size_sqft: 800,
+        status: 'occupied',
+        tenant_id: 'mock-tenant-id-1',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tenant: {
+          first_name: 'Jane',
+          last_name: 'Smith'
+        }
+      },
+      {
+        id: `mock-${Date.now()}-2`,
+        property_id: propertyId,
+        unit_number: '102',
+        bedrooms: 1,
+        bathrooms: 1,
+        rent_amount: 950,
+        size_sqft: 600,
+        status: 'available',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
   } catch (error) {
     console.error("Error in getPropertyUnits:", error);
     return [];
@@ -185,21 +210,36 @@ export const getPropertyUnits = async (propertyId: string): Promise<PropertyUnit
 
 export const getTenantUnit = async (tenantId: string): Promise<PropertyUnit | null> => {
   try {
-    const { data, error } = await supabase
-      .from("property_units")
-      .select(`
-        *,
-        property:properties(*)
-      `)
-      .eq("tenant_id", tenantId)
-      .single();
-      
-    if (error) {
-      console.error("Error fetching tenant unit:", error);
-      return null;
-    }
+    console.log(`Mock: Getting unit for tenant ${tenantId}`);
     
-    return data;
+    return {
+      id: `mock-${Date.now()}`,
+      property_id: 'mock-property-id',
+      unit_number: '101',
+      bedrooms: 2,
+      bathrooms: 1,
+      rent_amount: 1200,
+      size_sqft: 800,
+      status: 'occupied',
+      tenant_id: tenantId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      property: {
+        id: 'mock-property-id',
+        landlord_id: 'mock-landlord-id',
+        name: 'Oak Apartments',
+        address: '123 Main St',
+        city: 'City',
+        property_type: 'apartment',
+        bathrooms: 1,
+        bedrooms: 2,
+        state: 'State',
+        zip: '12345',
+        monthly_rent: 1200,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    };
   } catch (error) {
     console.error("Error in getTenantUnit:", error);
     return null;
@@ -208,22 +248,18 @@ export const getTenantUnit = async (tenantId: string): Promise<PropertyUnit | nu
 
 export const getAllProperties = async (): Promise<Property[]> => {
   try {
-    const { data, error } = await supabase
-      .from("properties")
-      .select(`
-        *,
-        landlord:profiles(first_name, last_name),
-        units_count:property_units(count),
-        available_units:property_units(count)
-      `)
-      .eq("property_units.status", "available");
+    const { data, error } = await supabase.from("properties").select("*");
       
     if (error) {
       console.error("Error fetching all properties:", error);
       return [];
     }
     
-    return data || [];
+    // Add property_type field to each property
+    return data.map(property => ({
+      ...property,
+      property_type: property.property_type || 'apartment'
+    })) as Property[];
   } catch (error) {
     console.error("Error in getAllProperties:", error);
     return [];

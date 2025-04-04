@@ -25,6 +25,23 @@ export interface AnalyticsSummary {
   };
 }
 
+export interface PropertyMetrics {
+  totalProperties: number;
+  totalRooms: number;
+  occupancyRate: number;
+  averageRent: number;
+}
+
+interface UnitWithProperty {
+  id: string;
+  status: string;
+  rent_amount: number;
+  property: {
+    name: string;
+    // Other property fields
+  };
+}
+
 /**
  * Get overview metrics for a landlord
  */
@@ -127,21 +144,4 @@ export async function getTenantAnalytics(tenantId: string): Promise<AnalyticsSum
     console.error('Error getting tenant analytics:', error);
     return {};
   }
-}
-
-interface PropertyMetrics {
-  totalProperties: number;
-  totalRooms: number;
-  occupancyRate: number;
-  averageRent: number;
-}
-
-interface UnitWithProperty {
-  id: string;
-  status: string;
-  rent_amount: number;
-  property: {
-    name: string;
-    // Other property fields
-  };
 }

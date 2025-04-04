@@ -38,13 +38,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
-      // Cast the user_type to ensure it's either 'tenant' or 'landlord'
-      const typedData = {
-        ...data,
-        user_type: data.user_type as 'tenant' | 'landlord'
-      };
-
-      setProfile(typedData as Profile);
+      // Ensure the user_type is properly typed
+      if (data && (data.user_type === 'tenant' || data.user_type === 'landlord')) {
+        setProfile(data as Profile);
+      } else {
+        throw new Error("Invalid user_type in profile data");
+      }
     } catch (err) {
       console.error("Error fetching profile:", err);
       setError(err instanceof Error ? err : new Error(String(err)));

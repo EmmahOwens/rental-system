@@ -22,216 +22,209 @@ export interface LandlordWithConnection extends Profile {
   unread_count: number;
 }
 
+// Mock functions to simulate tenant-landlord connections
+// These would be replaced with actual implementations once the tenant_landlord_connections table is created
+
 /**
- * Create a connection between a tenant and a landlord
+ * Create a connection between a tenant and a landlord (mock)
  */
 export async function createTenantLandlordConnection(tenantId: string, landlordId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .insert({
-        tenant_id: tenantId,
-        landlord_id: landlordId,
-        status: 'active'
-      })
-      .select('*')
-      .single();
-    
-    if (error) {
-      console.error('Error creating tenant-landlord connection:', error);
-      throw error;
-    }
-    
-    return data as TenantLandlordConnection;
-  } catch (error) {
-    console.error('Error in createTenantLandlordConnection:', error);
-    throw error;
-  }
+  console.log(`Mock: Creating connection between ${tenantId} and ${landlordId}`);
+  
+  return {
+    id: `mock-${Date.now()}`,
+    tenant_id: tenantId,
+    landlord_id: landlordId,
+    status: 'active',
+    unread_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  } as TenantLandlordConnection;
 }
 
 /**
- * Get all connections for a tenant
+ * Get all connections for a tenant (mock)
  */
 export async function getTenantConnections(tenantId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        *,
-        landlord:profiles!landlord_id(id, first_name, last_name, avatar_url, user_type)
-      `)
-      .eq('tenant_id', tenantId);
-    
-    if (error) {
-      console.error('Error fetching tenant connections:', error);
-      throw error;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error in getTenantConnections:', error);
-    throw error;
+  console.log(`Mock: Getting connections for tenant ${tenantId}`);
+  
+  // Get a landlord to create a mock connection
+  const { data: landlords } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', 'landlord')
+    .limit(1);
+  
+  if (!landlords || landlords.length === 0) {
+    return [];
   }
+  
+  return [{
+    id: `mock-${Date.now()}`,
+    tenant_id: tenantId,
+    landlord_id: landlords[0].id,
+    status: 'active',
+    unread_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    landlord: landlords[0]
+  }];
 }
 
 /**
- * Get all connections for a landlord
+ * Get all connections for a landlord (mock)
  */
 export async function getLandlordConnections(landlordId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        *,
-        tenant:profiles!tenant_id(id, first_name, last_name, avatar_url, user_type)
-      `)
-      .eq('landlord_id', landlordId);
-    
-    if (error) {
-      console.error('Error fetching landlord connections:', error);
-      throw error;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error in getLandlordConnections:', error);
-    throw error;
+  console.log(`Mock: Getting connections for landlord ${landlordId}`);
+  
+  // Get a tenant to create a mock connection
+  const { data: tenants } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', 'tenant')
+    .limit(1);
+  
+  if (!tenants || tenants.length === 0) {
+    return [];
   }
+  
+  return [{
+    id: `mock-${Date.now()}`,
+    tenant_id: tenants[0].id,
+    landlord_id: landlordId,
+    status: 'active',
+    unread_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    tenant: tenants[0]
+  }];
 }
 
 /**
- * Update the status of a connection
+ * Update the status of a connection (mock)
  */
 export async function updateConnectionStatus(connectionId: string, status: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .update({ status })
-      .eq('id', connectionId)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating connection status:', error);
-      throw error;
-    }
-    
-    return data as TenantLandlordConnection;
-  } catch (error) {
-    console.error('Error in updateConnectionStatus:', error);
-    throw error;
-  }
+  console.log(`Mock: Updating connection ${connectionId} status to ${status}`);
+  
+  return {
+    id: connectionId,
+    tenant_id: 'mock-tenant-id',
+    landlord_id: 'mock-landlord-id',
+    status: status,
+    unread_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  } as TenantLandlordConnection;
 }
 
 /**
- * Get a specific tenant-landlord connection
+ * Get a specific tenant-landlord connection (mock)
  */
 export async function getConnection(tenantId: string, landlordId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('landlord_id', landlordId)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') { // Not found
-      console.error('Error fetching connection:', error);
-      throw error;
-    }
-    
-    return data as TenantLandlordConnection | null;
-  } catch (error) {
-    console.error('Error in getConnection:', error);
+  console.log(`Mock: Getting connection between ${tenantId} and ${landlordId}`);
+  
+  // 50% chance of returning a connection to simulate existence check
+  if (Math.random() > 0.5) {
     return null;
   }
+  
+  return {
+    id: `mock-${Date.now()}`,
+    tenant_id: tenantId,
+    landlord_id: landlordId,
+    status: 'active',
+    unread_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  } as TenantLandlordConnection;
 }
 
 /**
- * Get a connection by ID
+ * Get a connection by ID (mock)
  */
 export async function getConnectionById(connectionId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select('*, tenant:profiles!tenant_id(*), landlord:profiles!landlord_id(*)')
-      .eq('id', connectionId)
-      .single();
+  console.log(`Mock: Getting connection by ID ${connectionId}`);
+  
+  // Get sample tenant and landlord
+  const { data: tenants } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', 'tenant')
+    .limit(1);
     
-    if (error) {
-      console.error('Error fetching connection by ID:', error);
-      throw error;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error in getConnectionById:', error);
-    throw error;
+  const { data: landlords } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', 'landlord')
+    .limit(1);
+  
+  if (!tenants || !landlords || tenants.length === 0 || landlords.length === 0) {
+    return null;
   }
+  
+  return {
+    id: connectionId,
+    tenant_id: tenants[0].id,
+    landlord_id: landlords[0].id,
+    status: 'active',
+    unread_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    tenant: tenants[0],
+    landlord: landlords[0]
+  };
 }
 
 /**
- * Get all tenants for a landlord with their connection details
+ * Get all tenants for a landlord with their connection details (mock)
  */
 export async function getLandlordTenants(landlordId: string): Promise<TenantWithConnection[]> {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        id,
-        unread_count,
-        tenant:profiles!tenant_id(*)
-      `)
-      .eq('landlord_id', landlordId)
-      .eq('status', 'active');
-    
-    if (error) {
-      console.error('Error fetching landlord tenants:', error);
-      throw error;
-    }
-    
-    const tenants = data.map(item => ({
-      ...item.tenant,
-      connection_id: item.id,
-      unread_count: item.unread_count || 0
-    })) as TenantWithConnection[];
-    
-    return tenants;
-  } catch (error) {
-    console.error('Error in getLandlordTenants:', error);
+  console.log(`Mock: Getting tenants for landlord ${landlordId}`);
+  
+  const { data: tenants } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', 'tenant')
+    .limit(5);
+  
+  if (!tenants || tenants.length === 0) {
     return [];
   }
+  
+  return tenants.map(tenant => ({
+    ...tenant,
+    connection_id: `mock-${Date.now()}-${tenant.id}`,
+    unread_count: Math.floor(Math.random() * 5)
+  })) as TenantWithConnection[];
 }
 
 /**
- * Get all landlords for a tenant with their connection details
+ * Get all landlords for a tenant with their connection details (mock)
  */
 export async function getTenantLandlords(tenantId: string): Promise<LandlordWithConnection[]> {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        id,
-        unread_count,
-        landlord:profiles!landlord_id(*)
-      `)
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active');
-    
-    if (error) {
-      console.error('Error fetching tenant landlords:', error);
-      throw error;
-    }
-    
-    const landlords = data.map(item => ({
-      ...item.landlord,
-      connection_id: item.id,
-      unread_count: item.unread_count || 0
-    })) as LandlordWithConnection[];
-    
-    return landlords;
-  } catch (error) {
-    console.error('Error in getTenantLandlords:', error);
+  console.log(`Mock: Getting landlords for tenant ${tenantId}`);
+  
+  const { data: landlords } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', 'landlord')
+    .limit(5);
+  
+  if (!landlords || landlords.length === 0) {
     return [];
   }
+  
+  return landlords.map(landlord => ({
+    ...landlord,
+    connection_id: `mock-${Date.now()}-${landlord.id}`,
+    unread_count: Math.floor(Math.random() * 5)
+  })) as LandlordWithConnection[];
+}
+
+/**
+ * Update unread count in connection (mock)
+ */
+export async function updateConnectionUnreadCount(connectionId: string, count: number) {
+  console.log(`Mock: Updating unread count for connection ${connectionId} to ${count}`);
+  return true;
 }

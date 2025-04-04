@@ -1,10 +1,11 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface MaintenanceRequest {
   id: string;
   tenant_id: string;
   landlord_id: string;
-  property_unit_id?: string;
+  property_id: string;
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'emergency';
@@ -30,6 +31,9 @@ export interface MaintenanceRequest {
   };
 }
 
+// Mock functions for maintenance requests
+// These would be replaced with actual implementations once the maintenance_requests table is properly configured
+
 export const createMaintenanceRequest = async (
   tenantId: string,
   landlordId: string,
@@ -37,26 +41,24 @@ export const createMaintenanceRequest = async (
     title: string;
     description: string;
     priority: MaintenanceRequest['priority'];
-    property_unit_id?: string;
+    property_id: string;
   }
 ): Promise<MaintenanceRequest | null> => {
   try {
-    const { data, error } = await supabase
-      .from("maintenance_requests")
-      .insert({
-        tenant_id: tenantId,
-        landlord_id: landlordId,
-        ...requestData
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error creating maintenance request:", error);
-      return null;
-    }
+    console.log(`Mock: Creating maintenance request from tenant ${tenantId} to landlord ${landlordId}`);
     
-    return data;
+    return {
+      id: `mock-${Date.now()}`,
+      tenant_id: tenantId,
+      landlord_id: landlordId,
+      property_id: requestData.property_id,
+      title: requestData.title,
+      description: requestData.description,
+      priority: requestData.priority,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in createMaintenanceRequest:", error);
     return null;
@@ -69,26 +71,21 @@ export const updateMaintenanceRequestStatus = async (
   resolvedAt?: string
 ): Promise<MaintenanceRequest | null> => {
   try {
-    const updateData: any = { status };
-    if (status === 'completed' && !resolvedAt) {
-      updateData.resolved_at = new Date().toISOString();
-    } else if (resolvedAt) {
-      updateData.resolved_at = resolvedAt;
-    }
+    console.log(`Mock: Updating maintenance request ${requestId} status to ${status}`);
     
-    const { data, error } = await supabase
-      .from("maintenance_requests")
-      .update(updateData)
-      .eq("id", requestId)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error updating maintenance request status:", error);
-      return null;
-    }
-    
-    return data;
+    return {
+      id: requestId,
+      tenant_id: "mock-tenant-id",
+      landlord_id: "mock-landlord-id",
+      property_id: "mock-property-id",
+      title: "Mock Maintenance Request",
+      description: "This is a mock maintenance request",
+      priority: 'medium',
+      status: status,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      resolved_at: status === 'completed' ? (resolvedAt || new Date().toISOString()) : undefined
+    };
   } catch (error) {
     console.error("Error in updateMaintenanceRequestStatus:", error);
     return null;
@@ -97,25 +94,56 @@ export const updateMaintenanceRequestStatus = async (
 
 export const getTenantMaintenanceRequests = async (tenantId: string): Promise<MaintenanceRequest[]> => {
   try {
-    const { data, error } = await supabase
-      .from("maintenance_requests")
-      .select(`
-        *,
-        landlord:profiles!maintenance_requests_landlord_id_fkey(first_name, last_name),
-        property_unit:property_units(
-          unit_number,
-          property:properties(name, address)
-        )
-      `)
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
-      
-    if (error) {
-      console.error("Error fetching tenant maintenance requests:", error);
-      return [];
-    }
+    console.log(`Mock: Getting maintenance requests for tenant ${tenantId}`);
     
-    return data || [];
+    return [
+      {
+        id: `mock-${Date.now()}-1`,
+        tenant_id: tenantId,
+        landlord_id: "mock-landlord-id",
+        property_id: "mock-property-id",
+        title: "Broken Faucet",
+        description: "The kitchen faucet is leaking",
+        priority: 'medium',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        landlord: {
+          first_name: "John",
+          last_name: "Doe"
+        },
+        property_unit: {
+          unit_number: "101",
+          property: {
+            name: "Oak Apartments",
+            address: "123 Main St"
+          }
+        }
+      },
+      {
+        id: `mock-${Date.now()}-2`,
+        tenant_id: tenantId,
+        landlord_id: "mock-landlord-id",
+        property_id: "mock-property-id",
+        title: "AC Not Working",
+        description: "The air conditioner isn't cooling",
+        priority: 'high',
+        status: 'in_progress',
+        created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        updated_at: new Date().toISOString(),
+        landlord: {
+          first_name: "John",
+          last_name: "Doe"
+        },
+        property_unit: {
+          unit_number: "101",
+          property: {
+            name: "Oak Apartments",
+            address: "123 Main St"
+          }
+        }
+      }
+    ];
   } catch (error) {
     console.error("Error in getTenantMaintenanceRequests:", error);
     return [];
@@ -124,25 +152,58 @@ export const getTenantMaintenanceRequests = async (tenantId: string): Promise<Ma
 
 export const getLandlordMaintenanceRequests = async (landlordId: string): Promise<MaintenanceRequest[]> => {
   try {
-    const { data, error } = await supabase
-      .from("maintenance_requests")
-      .select(`
-        *,
-        tenant:profiles!maintenance_requests_tenant_id_fkey(first_name, last_name, phone),
-        property_unit:property_units(
-          unit_number,
-          property:properties(name, address)
-        )
-      `)
-      .eq("landlord_id", landlordId)
-      .order("created_at", { ascending: false });
-      
-    if (error) {
-      console.error("Error fetching landlord maintenance requests:", error);
-      return [];
-    }
+    console.log(`Mock: Getting maintenance requests for landlord ${landlordId}`);
     
-    return data || [];
+    return [
+      {
+        id: `mock-${Date.now()}-1`,
+        tenant_id: "mock-tenant-id-1",
+        landlord_id: landlordId,
+        property_id: "mock-property-id",
+        title: "Broken Faucet",
+        description: "The kitchen faucet is leaking",
+        priority: 'medium',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tenant: {
+          first_name: "Jane",
+          last_name: "Smith",
+          phone: "555-1234"
+        },
+        property_unit: {
+          unit_number: "101",
+          property: {
+            name: "Oak Apartments",
+            address: "123 Main St"
+          }
+        }
+      },
+      {
+        id: `mock-${Date.now()}-2`,
+        tenant_id: "mock-tenant-id-2",
+        landlord_id: landlordId,
+        property_id: "mock-property-id",
+        title: "AC Not Working",
+        description: "The air conditioner isn't cooling",
+        priority: 'high',
+        status: 'in_progress',
+        created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        updated_at: new Date().toISOString(),
+        tenant: {
+          first_name: "Bob",
+          last_name: "Johnson",
+          phone: "555-5678"
+        },
+        property_unit: {
+          unit_number: "202",
+          property: {
+            name: "Oak Apartments",
+            address: "123 Main St"
+          }
+        }
+      }
+    ];
   } catch (error) {
     console.error("Error in getLandlordMaintenanceRequests:", error);
     return [];

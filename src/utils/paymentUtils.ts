@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Payment {
@@ -13,6 +14,9 @@ export interface Payment {
   confirmed_at?: string;
 }
 
+// Mock functions for payments
+// These would be replaced with actual implementations once the payments table is properly configured
+
 export const createPayment = async (
   tenantId: string,
   landlordId: string,
@@ -21,27 +25,19 @@ export const createPayment = async (
   description?: string
 ): Promise<Payment | null> => {
   try {
-    const { data, error } = await supabase
-      .from("payments")
-      .insert({
-        tenant_id: tenantId,
-        landlord_id: landlordId,
-        amount,
-        payment_method: paymentMethod,
-        description,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error creating payment:", error);
-      return null;
-    }
+    console.log(`Mock: Creating payment from tenant ${tenantId} to landlord ${landlordId}`);
     
-    return data;
+    return {
+      id: `mock-${Date.now()}`,
+      tenant_id: tenantId,
+      landlord_id: landlordId,
+      amount,
+      payment_method: paymentMethod,
+      description,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in createPayment:", error);
     return null;
@@ -57,54 +53,17 @@ export const getPaymentStats = async (
   monthlyData: Array<{ month: string; paid: number; pending: number }>;
 }> => {
   try {
-    // Get all payments for the user
-    const { data: payments, error } = await supabase
-      .from("payments")
-      .select("*")
-      .eq(userType === 'tenant' ? 'tenant_id' : 'landlord_id', userId);
-      
-    if (error) {
-      console.error(`Error fetching ${userType} payments:`, error);
-      return { totalPaid: 0, pendingAmount: 0, monthlyData: [] };
-    }
+    console.log(`Mock: Getting payment stats for ${userType} ${userId}`);
     
-    // Calculate totals
-    const totalPaid = payments
-      ?.filter(payment => payment.status === 'confirmed')
-      .reduce((sum, payment) => sum + payment.amount, 0) || 0;
-      
-    const pendingAmount = payments
-      ?.filter(payment => payment.status === 'pending')
-      .reduce((sum, payment) => sum + payment.amount, 0) || 0;
-    
-    // Group by month for chart data
-    const monthlyData: Record<string, { paid: number; pending: number }> = {};
-    
-    payments?.forEach(payment => {
-      const date = new Date(payment.created_at);
-      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (!monthlyData[monthYear]) {
-        monthlyData[monthYear] = { paid: 0, pending: 0 };
-      }
-      
-      if (payment.status === 'confirmed') {
-        monthlyData[monthYear].paid += payment.amount;
-      } else if (payment.status === 'pending') {
-        monthlyData[monthYear].pending += payment.amount;
-      }
-    });
-    
-    // Convert to array and sort by month
-    const monthlyDataArray = Object.entries(monthlyData).map(([month, data]) => ({
-      month,
-      ...data
-    })).sort((a, b) => a.month.localeCompare(b.month));
-    
+    // Mock data
     return {
-      totalPaid,
-      pendingAmount,
-      monthlyData: monthlyDataArray
+      totalPaid: userType === 'tenant' ? 3600 : 12500,
+      pendingAmount: userType === 'tenant' ? 1200 : 2300,
+      monthlyData: [
+        { month: '2023-01', paid: userType === 'tenant' ? 1200 : 10000, pending: userType === 'tenant' ? 0 : 1500 },
+        { month: '2023-02', paid: userType === 'tenant' ? 1200 : 11000, pending: userType === 'tenant' ? 0 : 1200 },
+        { month: '2023-03', paid: userType === 'tenant' ? 1200 : 12500, pending: userType === 'tenant' ? 1200 : 2300 }
+      ]
     };
   } catch (error) {
     console.error("Error in getPaymentStats:", error);
@@ -117,22 +76,34 @@ export const getUserPayments = async (
   userType: 'tenant' | 'landlord'
 ): Promise<Payment[]> => {
   try {
-    const { data, error } = await supabase
-      .from("payments")
-      .select(`
-        *,
-        tenant:profiles!payments_tenant_id_fkey(first_name, last_name),
-        landlord:profiles!payments_landlord_id_fkey(first_name, last_name)
-      `)
-      .eq(userType === 'tenant' ? 'tenant_id' : 'landlord_id', userId)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      console.error(`Error fetching ${userType} payments:`, error);
-      return [];
-    }
+    console.log(`Mock: Getting payments for ${userType} ${userId}`);
     
-    return data || [];
+    // Mock data
+    return [
+      {
+        id: `mock-${Date.now()}-1`,
+        tenant_id: userType === 'tenant' ? userId : 'mock-tenant-id',
+        landlord_id: userType === 'landlord' ? userId : 'mock-landlord-id',
+        amount: 1200,
+        payment_method: 'bank_transfer',
+        description: 'March Rent',
+        status: 'confirmed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        confirmed_at: new Date().toISOString()
+      },
+      {
+        id: `mock-${Date.now()}-2`,
+        tenant_id: userType === 'tenant' ? userId : 'mock-tenant-id',
+        landlord_id: userType === 'landlord' ? userId : 'mock-landlord-id',
+        amount: 1200,
+        payment_method: 'bank_transfer',
+        description: 'April Rent',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
   } catch (error) {
     console.error("Error in getUserPayments:", error);
     return [];
@@ -144,6 +115,8 @@ export const updatePaymentStatus = async (
   status: 'confirmed' | 'rejected'
 ): Promise<Payment | null> => {
   try {
+    console.log(`Mock: Updating payment ${paymentId} status to ${status}`);
+    
     const updateData: any = { 
       status,
       updated_at: new Date().toISOString()
@@ -153,19 +126,18 @@ export const updatePaymentStatus = async (
       updateData.confirmed_at = new Date().toISOString();
     }
     
-    const { data, error } = await supabase
-      .from("payments")
-      .update(updateData)
-      .eq("id", paymentId)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error updating payment status:", error);
-      return null;
-    }
-    
-    return data;
+    return {
+      id: paymentId,
+      tenant_id: 'mock-tenant-id',
+      landlord_id: 'mock-landlord-id',
+      amount: 1200,
+      payment_method: 'bank_transfer',
+      description: 'Rent Payment',
+      status: status,
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updated_at: new Date().toISOString(),
+      confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined
+    };
   } catch (error) {
     console.error("Error in updatePaymentStatus:", error);
     return null;

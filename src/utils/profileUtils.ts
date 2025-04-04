@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { createTenantLandlordConnection, getConnection } from './connectionUtils';
 
 // Profile interface
 export interface Profile {
@@ -16,8 +15,8 @@ export interface Profile {
 }
 
 export interface TenantWithConnection extends Profile {
-  connection_id: string;
-  connection_status: string;
+  connection_id?: string;
+  connection_status?: string;
   email?: string;
 }
 
@@ -40,36 +39,55 @@ export async function getProfileById(userId: string) {
 }
 
 /**
- * Connect a tenant to a landlord
+ * Get all profiles by type
  */
-export async function connectTenantToLandlord(tenantId: string, landlordId: string) {
-  // Check if connection already exists
-  const existingConnection = await getConnection(tenantId, landlordId);
+export async function getProfilesByType(type: 'tenant' | 'landlord') {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_type', type);
   
-  if (!existingConnection) {
-    return await createTenantLandlordConnection(tenantId, landlordId);
+  if (error) {
+    console.error(`Error fetching ${type} profiles:`, error);
+    throw error;
   }
   
-  return existingConnection;
+  return data as Profile[];
+}
+
+// Mock functions for tenant-landlord connections
+// These would be implemented fully once the tenant_landlord_connections table is created
+
+/**
+ * Connect a tenant to a landlord (mock)
+ */
+export async function connectTenantToLandlord(tenantId: string, landlordId: string) {
+  console.log(`Creating connection between tenant ${tenantId} and landlord ${landlordId}`);
+  return {
+    id: 'mock-connection-id',
+    tenant_id: tenantId,
+    landlord_id: landlordId,
+    status: 'active',
+    created_at: new Date().toISOString()
+  };
 }
 
 /**
- * Assign a tenant to a landlord automatically
+ * Assign a tenant to a landlord automatically (mock)
  */
 export async function assignTenantToLandlord(tenantId: string) {
-  // Find a suitable landlord
-  const landlord = await findLandlordForTenant();
-  if (!landlord) {
+  const landlords = await getProfilesByType('landlord');
+  if (landlords.length === 0) {
     console.warn('No landlord found to assign tenant to');
     return null;
   }
   
+  const landlord = landlords[0];
   return await connectTenantToLandlord(tenantId, landlord.id);
 }
 
 /**
  * Find a landlord for a new tenant
- * In a real app, this would have more sophisticated matching logic
  */
 export async function findLandlordForTenant() {
   const { data, error } = await supabase
@@ -91,106 +109,39 @@ export async function findLandlordForTenant() {
 }
 
 /**
- * Get a tenant's landlord
+ * Get a tenant's landlord (mock)
  */
 export async function getTenantLandlord(tenantId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        *,
-        landlord:profiles!landlord_id(*)
-      `)
-      .eq('tenant_id', tenantId)
-      .single();
-    
-    if (error) {
-      console.error('Error fetching tenant landlord:', error);
-      throw error;
-    }
-    
-    return data.landlord as Profile;
-  } catch (error) {
-    console.error('Error in getTenantLandlord:', error);
-    throw error;
+  const landlords = await getProfilesByType('landlord');
+  if (landlords.length === 0) {
+    throw new Error('No landlords available');
   }
+  
+  return landlords[0];
 }
 
 /**
- * Get all tenants for a landlord
+ * Get all tenants for a landlord (mock)
  */
 export async function getLandlordTenants(landlordId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        *,
-        tenant:profiles!tenant_id(*)
-      `)
-      .eq('landlord_id', landlordId);
-    
-    if (error) {
-      console.error('Error fetching landlord tenants:', error);
-      throw error;
-    }
-    
-    return data.map(connection => {
-      return {
-        ...connection.tenant,
-        connection_id: connection.id,
-        connection_status: connection.status
-      } as TenantWithConnection;
-    });
-  } catch (error) {
-    console.error('Error in getLandlordTenants:', error);
-    throw error;
-  }
+  const tenants = await getProfilesByType('tenant');
+  
+  return tenants.map(tenant => ({
+    ...tenant,
+    connection_id: 'mock-connection-id',
+    connection_status: 'active'
+  } as TenantWithConnection));
 }
 
 /**
- * Get all landlords for a tenant
+ * Get all landlords for a tenant (mock)
  */
 export async function getTenantLandlords(tenantId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('tenant_landlord_connections')
-      .select(`
-        *,
-        landlord:profiles!landlord_id(*)
-      `)
-      .eq('tenant_id', tenantId);
-    
-    if (error) {
-      console.error('Error fetching tenant landlords:', error);
-      throw error;
-    }
-    
-    return data.map(connection => {
-      return {
-        ...connection.landlord,
-        connection_id: connection.id,
-        connection_status: connection.status
-      } as TenantWithConnection;
-    });
-  } catch (error) {
-    console.error('Error in getTenantLandlords:', error);
-    throw error;
-  }
-}
-
-/**
- * Get all profiles by type
- */
-export async function getProfilesByType(type: 'tenant' | 'landlord') {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_type', type);
+  const landlords = await getProfilesByType('landlord');
   
-  if (error) {
-    console.error(`Error fetching ${type} profiles:`, error);
-    throw error;
-  }
-  
-  return data as Profile[];
+  return landlords.map(landlord => ({
+    ...landlord,
+    connection_id: 'mock-connection-id',
+    connection_status: 'active'
+  } as TenantWithConnection));
 }

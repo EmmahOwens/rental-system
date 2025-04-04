@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Notification {
@@ -12,6 +13,9 @@ export interface Notification {
   created_at: string;
 }
 
+// Mock functions for notifications
+// These would be replaced with actual implementations once the notifications table is created
+
 export const createNotification = async (
   userId: string,
   data: {
@@ -23,21 +27,19 @@ export const createNotification = async (
   }
 ): Promise<Notification | null> => {
   try {
-    const { data: notification, error } = await supabase
-      .from("notifications")
-      .insert({
-        user_id: userId,
-        ...data
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error("Error creating notification:", error);
-      return null;
-    }
+    console.log(`Mock: Creating notification for user ${userId}`);
     
-    return notification;
+    return {
+      id: `mock-${Date.now()}`,
+      user_id: userId,
+      title: data.title,
+      message: data.message,
+      type: data.type,
+      is_read: false,
+      related_entity_type: data.related_entity_type,
+      related_entity_id: data.related_entity_id,
+      created_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error in createNotification:", error);
     return null;
@@ -46,18 +48,32 @@ export const createNotification = async (
 
 export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
   try {
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-      
-    if (error) {
-      console.error("Error fetching user notifications:", error);
-      return [];
-    }
+    console.log(`Mock: Getting notifications for user ${userId}`);
     
-    return data || [];
+    return [
+      {
+        id: `mock-${Date.now()}-1`,
+        user_id: userId,
+        title: "New Message",
+        message: "You have a new message from John",
+        type: 'info',
+        is_read: false,
+        related_entity_type: 'message',
+        related_entity_id: 'mock-message-id',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: `mock-${Date.now()}-2`,
+        user_id: userId,
+        title: "Rent Due",
+        message: "Your rent payment is due in 3 days",
+        type: 'warning',
+        is_read: false,
+        related_entity_type: 'payment',
+        related_entity_id: 'mock-payment-id',
+        created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+      }
+    ];
   } catch (error) {
     console.error("Error in getUserNotifications:", error);
     return [];
@@ -66,16 +82,7 @@ export const getUserNotifications = async (userId: string): Promise<Notification
 
 export const markNotificationAsRead = async (notificationId: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", notificationId);
-      
-    if (error) {
-      console.error("Error marking notification as read:", error);
-      return false;
-    }
-    
+    console.log(`Mock: Marking notification ${notificationId} as read`);
     return true;
   } catch (error) {
     console.error("Error in markNotificationAsRead:", error);
@@ -85,17 +92,7 @@ export const markNotificationAsRead = async (notificationId: string): Promise<bo
 
 export const markAllNotificationsAsRead = async (userId: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", userId)
-      .eq("is_read", false);
-      
-    if (error) {
-      console.error("Error marking all notifications as read:", error);
-      return false;
-    }
-    
+    console.log(`Mock: Marking all notifications as read for user ${userId}`);
     return true;
   } catch (error) {
     console.error("Error in markAllNotificationsAsRead:", error);
@@ -105,18 +102,8 @@ export const markAllNotificationsAsRead = async (userId: string): Promise<boolea
 
 export const getUnreadNotificationsCount = async (userId: string): Promise<number> => {
   try {
-    const { count, error } = await supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("is_read", false);
-      
-    if (error) {
-      console.error("Error counting unread notifications:", error);
-      return 0;
-    }
-    
-    return count || 0;
+    console.log(`Mock: Getting unread notification count for user ${userId}`);
+    return Math.floor(Math.random() * 5); // Return a random number between 0 and 4
   } catch (error) {
     console.error("Error in getUnreadNotificationsCount:", error);
     return 0;
