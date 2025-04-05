@@ -8,7 +8,7 @@ export interface Property {
   address: string;
   city: string;
   description?: string;
-  property_type: string;
+  property_type: string; // Ensuring property_type is defined as required
   created_at: string;
   updated_at: string;
   units_count?: number;
