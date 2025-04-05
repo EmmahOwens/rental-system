@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Property {
@@ -118,10 +119,10 @@ export const getLandlordProperties = async (landlordId: string): Promise<Propert
       return [];
     }
     
-    // Add property_type field to each property if not already set
+    // Transform each property to ensure it has a property_type field
     return data.map(property => ({
       ...property,
-      property_type: property.property_type || 'apartment'
+      property_type: property.property_type || 'apartment' // Use a default value if property_type is missing
     })) as Property[];
   } catch (error) {
     console.error("Error in getLandlordProperties:", error);
@@ -271,10 +272,10 @@ export const getAllProperties = async (): Promise<Property[]> => {
       return [];
     }
     
-    // Add property_type field to each property if not already set
+    // Transform each property to ensure it has a property_type field
     return data.map(property => ({
       ...property,
-      property_type: property.property_type || 'apartment'
+      property_type: property.property_type || 'apartment' // Use a default value if property_type is missing
     })) as Property[];
   } catch (error) {
     console.error("Error in getAllProperties:", error);
