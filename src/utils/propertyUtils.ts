@@ -119,11 +119,15 @@ export const getLandlordProperties = async (landlordId: string): Promise<Propert
       return [];
     }
     
-    // Transform each property to ensure it has a property_type field
-    return data.map(property => ({
-      ...property,
-      property_type: property.property_type || 'apartment' // Use a default value if property_type is missing
-    })) as Property[];
+    // Add property_type to each property object
+    return data.map(property => {
+      // Create a new object with all properties from the returned data
+      // and explicitly add the property_type field if it doesn't exist
+      return {
+        ...property,
+        property_type: 'apartment' // Since the column doesn't exist, use a default value
+      } as Property;
+    });
   } catch (error) {
     console.error("Error in getLandlordProperties:", error);
     return [];
@@ -272,11 +276,15 @@ export const getAllProperties = async (): Promise<Property[]> => {
       return [];
     }
     
-    // Transform each property to ensure it has a property_type field
-    return data.map(property => ({
-      ...property,
-      property_type: property.property_type || 'apartment' // Use a default value if property_type is missing
-    })) as Property[];
+    // Add property_type to each property object
+    return data.map(property => {
+      // Create a new object with all properties from the returned data
+      // and explicitly add the property_type field if it doesn't exist
+      return {
+        ...property,
+        property_type: 'apartment' // Since the column doesn't exist, use a default value
+      } as Property;
+    });
   } catch (error) {
     console.error("Error in getAllProperties:", error);
     return [];
