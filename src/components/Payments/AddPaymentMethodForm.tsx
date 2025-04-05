@@ -7,10 +7,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PaymentMethodType } from './PaymentMethodCard';
 import { CreditCard, Smartphone } from 'lucide-react';
-import mtnLogo from '/src/assets/mtn-logo.png';
-import airtelLogo from '/src/assets/airtel-logo.png';
-import visaLogo from '/src/assets/visa-logo.png';
-import mastercardLogo from '/src/assets/mastercard-logo.png';
 
 interface AddPaymentMethodFormProps {
   onAddMethod: (data: {
@@ -111,7 +107,11 @@ export function AddPaymentMethodForm({ onAddMethod, onCancel }: AddPaymentMethod
                   }`}
                   onClick={() => setMobileType('mtn')}
                 >
-                  <img src={mtnLogo} alt="MTN" className="h-8 mr-2" />
+                  <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/9/93/New-mtn-logo.jpg" 
+                    alt="MTN" 
+                    className="h-8 mr-2" 
+                  />
                   <span>MTN Mobile Money</span>
                 </div>
                 <div 
@@ -120,7 +120,11 @@ export function AddPaymentMethodForm({ onAddMethod, onCancel }: AddPaymentMethod
                   }`}
                   onClick={() => setMobileType('airtel')}
                 >
-                  <img src={airtelLogo} alt="Airtel" className="h-8 mr-2" />
+                  <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Airtel_logo.svg/2048px-Airtel_logo.svg.png" 
+                    alt="Airtel" 
+                    className="h-8 mr-2" 
+                  />
                   <span>Airtel Money</span>
                 </div>
               </div>
@@ -173,7 +177,11 @@ export function AddPaymentMethodForm({ onAddMethod, onCancel }: AddPaymentMethod
                   }`}
                   onClick={() => setCardType('visa')}
                 >
-                  <img src={visaLogo} alt="Visa" className="h-8 mr-2" />
+                  <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" 
+                    alt="Visa" 
+                    className="h-8 mr-2" 
+                  />
                   <span>Visa</span>
                 </div>
                 <div 
@@ -182,7 +190,11 @@ export function AddPaymentMethodForm({ onAddMethod, onCancel }: AddPaymentMethod
                   }`}
                   onClick={() => setCardType('mastercard')}
                 >
-                  <img src={mastercardLogo} alt="Mastercard" className="h-8 mr-2" />
+                  <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" 
+                    alt="Mastercard" 
+                    className="h-8 mr-2" 
+                  />
                   <span>Mastercard</span>
                 </div>
               </div>
