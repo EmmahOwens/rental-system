@@ -1,5 +1,4 @@
-
-import React from 'react'; // Add React import
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,7 +11,6 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import TenantDashboard from "./pages/TenantDashboard";
 import LandlordDashboard from "./pages/LandlordDashboard";
@@ -100,7 +98,6 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/verify-email" element={<VerifyEmail />} />
                 
                 {/* Dashboard router */}
                 <Route path="/dashboard" element={<RoleBasedDashboard />} />

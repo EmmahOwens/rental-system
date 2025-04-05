@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { assignTenantToLandlord } from '@/utils/profileUtils';
@@ -17,19 +18,12 @@ export interface User {
   phone?: string;
 }
 
-// OTP generation function
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
 type AuthContextType = {
   currentUser: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<string>;
+  signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<void>;
   logout: () => Promise<void>;
-  sendVerificationEmail: (email: string) => Promise<string>;
-  verifyEmail: (otp: string) => Promise<UserRole>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (userData: Partial<User>) => Promise<void>;
 };
@@ -39,8 +33,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [pendingVerificationUser, setPendingVerificationUser] = useState<any>(null);
-  const [currentOTP, setCurrentOTP] = useState<string>("");
 
   useEffect(() => {
     const checkUser = async () => {
@@ -59,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: user.email || '',
             name: user.user_metadata.name || '',
             role: user.user_metadata.role || 'tenant',
-            verified: user.email_confirmed_at ? true : false,
+            verified: true, // Always set as verified since we're removing verification
             firstName: user.user_metadata.firstName || '',
             lastName: user.user_metadata.lastName || '',
             phone: user.user_metadata.phone || ''
@@ -88,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: user.email || '',
             name: user.user_metadata.name || '',
             role: user.user_metadata.role || 'tenant',
-            verified: user.email_confirmed_at ? true : false,
+            verified: true, // Always set as verified since we're removing verification
             firstName: user.user_metadata.firstName || '',
             lastName: user.user_metadata.lastName || '',
             phone: user.user_metadata.phone || ''
@@ -118,15 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        if (error.message.includes("Email not confirmed")) {
-          localStorage.setItem('verification_email', email);
-          
-          const otp = await sendVerificationEmail(email);
-          
-          throw new Error("EMAIL_NEEDS_VERIFICATION");
-        } else {
-          throw error;
-        }
+        throw error;
       }
       
       console.log("Login successful:", data);
@@ -155,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name,
             role,
+            verified: true // Set as verified since we're removing verification
           },
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
@@ -177,107 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      const userForVerification = {
-        email,
-        name,
-        role,
-        password
-      };
-      setPendingVerificationUser(userForVerification);
-      
-      const otp = await sendVerificationEmail(email);
-      return email;
     } catch (error: any) {
       console.error("Signup error:", error);
       throw error;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const sendVerificationEmail = async (email: string) => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setCurrentOTP(otp);
-    
-    localStorage.setItem('verification_otp', otp);
-    localStorage.setItem('verification_email', email);
-    
-    console.log(`Verification OTP for ${email}: ${otp}`);
-    
-    return otp;
-  };
-
-  const verifyEmail = async (otp: string) => {
-    setIsLoading(true);
-    
-    const storedOTP = localStorage.getItem('verification_otp');
-    const storedEmail = localStorage.getItem('verification_email');
-    
-    if (otp !== storedOTP) {
-      setIsLoading(false);
-      throw new Error('Invalid OTP');
-    }
-    
-    try {
-      if (currentUser) {
-        const updatedUser = {
-          ...currentUser,
-          verified: true
-        };
-        
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            verified: true
-          }
-        });
-        
-        if (updateError) throw updateError;
-        
-        setCurrentUser(updatedUser);
-        
-        localStorage.removeItem('verification_otp');
-        localStorage.removeItem('verification_email');
-        
-        setIsLoading(false);
-        return updatedUser.role;
-      } else if (pendingVerificationUser) {
-        const userRole = pendingVerificationUser.role;
-        
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: pendingVerificationUser.email,
-            password: pendingVerificationUser.password
-          });
-          
-          if (error) {
-            console.error("Error signing in after verification:", error);
-          } else if (data.user) {
-            await supabase.auth.updateUser({
-              data: {
-                verified: true
-              }
-            });
-          }
-        } catch (signInError) {
-          console.error("Error during post-verification sign in:", signInError);
-        }
-        
-        setPendingVerificationUser(null);
-        setCurrentOTP("");
-        localStorage.removeItem('verification_otp');
-        localStorage.removeItem('verification_email');
-        
-        setIsLoading(false);
-        return userRole;
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      setIsLoading(false);
-      throw error;
-    }
-    
-    setIsLoading(false);
-    return 'tenant';
   };
 
   const resetPassword = async (email: string) => {
@@ -345,8 +235,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     signup,
     logout,
-    sendVerificationEmail,
-    verifyEmail,
     resetPassword,
     updateUserProfile
   };

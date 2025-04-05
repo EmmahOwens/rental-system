@@ -16,7 +16,7 @@ export default function Signup() {
   const [role, setRole] = useState<'tenant' | 'landlord'>('tenant');
   const [adminCode, setAdminCode] = useState("");
   const [showAdminCode, setShowAdminCode] = useState(false);
-  const { signup, sendVerificationEmail } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -43,8 +43,14 @@ export default function Signup() {
 
     try {
       await signup(email, name, password, role, role === 'landlord' ? adminCode : undefined);
-      const otp = await sendVerificationEmail(email);
-      navigate("/verify-email", { state: { email, otp } });
+      
+      toast({
+        title: "Account created successfully",
+        description: "You can now log in with your credentials",
+      });
+      
+      // Redirect to login page
+      navigate("/login", { replace: true });
     } catch (error: any) {
       toast({
         title: "Signup failed",
