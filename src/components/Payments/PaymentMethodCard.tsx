@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CreditCard, CheckCircle2 } from 'lucide-react';
 
@@ -26,7 +27,7 @@ export function PaymentMethodCard({
     switch (type) {
       case 'mtn':
         return {
-          logo: "https://upload.wikimedia.org/wikipedia/commons/9/93/New-mtn-logo.jpg",
+          logo: "https://cdn.britannica.com/97/177897-050-08BACF73/MTN-Group-logo.jpg",
           name: 'MTN Mobile Money',
           number: phoneNumber,
           bgGradient: 'from-yellow-400 to-yellow-500',
@@ -34,7 +35,7 @@ export function PaymentMethodCard({
         };
       case 'airtel':
         return {
-          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Airtel_logo.svg/2048px-Airtel_logo.svg.png",
+          logo: "https://1000logos.net/wp-content/uploads/2021/11/Airtel-Logo-2010.png",
           name: 'Airtel Money',
           number: phoneNumber,
           bgGradient: 'from-red-500 to-red-600',
@@ -42,7 +43,7 @@ export function PaymentMethodCard({
         };
       case 'visa':
         return {
-          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png",
+          logo: "https://www.visa.com/images/merchantoffers/card-image-800x450.png",
           name: 'Visa',
           number: formatCardNumber(cardNumber),
           bgGradient: 'from-blue-500 to-blue-600',
@@ -50,7 +51,7 @@ export function PaymentMethodCard({
         };
       case 'mastercard':
         return {
-          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png",
+          logo: "https://www.mastercard.us/content/dam/public/mastercard/assets/card-mockups/virtual-card/virtual-mastercard-card/Virtual-Mastercard_card_Mockup_Flat_Medium.png",
           name: 'Mastercard',
           number: formatCardNumber(cardNumber),
           bgGradient: 'from-orange-500 to-red-500',
