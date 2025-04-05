@@ -2,11 +2,23 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { UserRole } from "@/contexts/AuthContext";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  currentUser: {
+    id: string;
+    email: string;
+    name: string;
+    role: UserRole;
+    verified: boolean;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+  } | null;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, userData: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -84,12 +96,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Create a currentUser object based on the Supabase user data
+  const currentUser = user ? {
+    id: user.id,
+    email: user.email || '',
+    name: user.user_metadata?.name || '',
+    role: (user.user_metadata?.role || 'tenant') as UserRole,
+    verified: true,
+    firstName: user.user_metadata?.firstName || '',
+    lastName: user.user_metadata?.lastName || '',
+    phone: user.user_metadata?.phone || ''
+  } : null;
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         loading,
+        currentUser, // Add the currentUser property
+        isLoading: loading, // Add isLoading as an alias for loading
         login,
         signup,
         logout,
