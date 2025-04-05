@@ -272,7 +272,7 @@ export const getAllProperties = async (): Promise<Property[]> => {
       return [];
     }
     
-    // Add property_type field to each property
+    // Add property_type field to each property if not already set
     return data.map(property => ({
       ...property,
       property_type: property.property_type || 'apartment'
