@@ -10,13 +10,15 @@ interface UpcomingPaymentProps {
   amount: number;
   property: string;
   daysLeft: number;
+  onPaymentSuccess?: () => void;
 }
 
 export function UpcomingPayment({ 
   dueDate, 
   amount, 
   property, 
-  daysLeft 
+  daysLeft,
+  onPaymentSuccess
 }: UpcomingPaymentProps) {
   const [processingPayment, setProcessingPayment] = useState(false);
   const { toast } = useToast();
@@ -42,8 +44,10 @@ export function UpcomingPayment({
         description: `${formatUGX(amount)} has been paid successfully.`,
       });
       
-      // The parent component would need to refresh the payment history here
-      // We'll handle this via a callback
+      // Call the onPaymentSuccess callback from parent component
+      if (onPaymentSuccess) {
+        onPaymentSuccess();
+      }
       
     } catch (error) {
       toast({
