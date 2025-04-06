@@ -14,7 +14,9 @@ export default function Payments() {
     paymentMethods,
     setPaymentMethods,
     paymentHistory,
-    handlePaymentSuccess
+    handlePaymentSuccess,
+    loading,
+    error
   } = usePayments();
 
   return (
@@ -50,6 +52,8 @@ export default function Payments() {
       <PaymentHistoryComponent 
         paymentHistory={paymentHistory}
         isLandlord={isLandlord}
+        loading={loading}
+        error={error}
       />
     </DashboardLayout>
   );

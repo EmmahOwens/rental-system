@@ -10,7 +10,7 @@ interface UpcomingPaymentProps {
   amount: number;
   property: string;
   daysLeft: number;
-  onPaymentSuccess?: () => void;
+  onPaymentSuccess?: (amount?: number) => void;
 }
 
 export function UpcomingPayment({ 
@@ -46,7 +46,7 @@ export function UpcomingPayment({
       
       // Call the onPaymentSuccess callback from parent component
       if (onPaymentSuccess) {
-        onPaymentSuccess();
+        onPaymentSuccess(amount);
       }
       
     } catch (error) {
