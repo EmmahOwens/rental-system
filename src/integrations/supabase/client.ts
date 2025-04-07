@@ -10,7 +10,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase configuration');
 }
 
+// Create Supabase client with improved options
 export const supabase = createClient<Database>(
   supabaseUrl,
-  supabaseAnonKey
+  supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      storage: localStorage
+    },
+    global: {
+      fetch: (...args) => {
+        return fetch(...args).catch(err => {
+          console.error('Supabase fetch error:', err);
+          throw err;
+        });
+      }
+    }
+  }
 );

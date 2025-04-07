@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from '@supabase/supabase-js';
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event, session);
@@ -63,12 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
     
+    // THEN check for existing session
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Error getting session:", error);
-          throw error;
+          setIsLoading(false);
+          return;
         }
         
         setSession(session);
@@ -136,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
+      // Validate admin code for landlord role
       if (role === 'landlord') {
         if (adminCode !== 'Admin256') {
           toast({
@@ -147,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
+      // Attempt signup
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -175,16 +181,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "Your account has been created successfully!",
       });
       
+      // For tenant roles, attempt to assign to a landlord
       if (role === 'tenant' && data.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", data.user.id)
-          .single();
-          
-        if (!profileError && profileData) {
-          await assignTenantToLandlord(profileData.id);
-        }
+        setTimeout(async () => {
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("user_id", data.user!.id)
+              .single();
+              
+            if (!profileError && profileData) {
+              await assignTenantToLandlord(profileData.id);
+            }
+          } catch (assignError) {
+            console.error("Error assigning tenant to landlord:", assignError);
+            // Non-blocking error, don't throw
+          }
+        }, 0);
       }
       
     } catch (error: any) {

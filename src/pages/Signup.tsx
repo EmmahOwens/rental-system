@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -69,7 +68,14 @@ export default function Signup() {
       console.error("Signup error:", error);
       
       // Handle the error message
-      const errorMsg = error.message || "An error occurred during signup";
+      let errorMsg = "An error occurred during signup";
+      
+      if (error.message === "Failed to fetch") {
+        errorMsg = "Network connection error. Please check your internet connection and try again.";
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       setErrorMessage(errorMsg);
       
       toast({

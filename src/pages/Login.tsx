@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -47,7 +46,14 @@ export default function Login() {
       console.error("Login error:", error);
       
       // Handle specific error cases
-      const errorMsg = error.message || "Please check your credentials and try again";
+      let errorMsg = "Please check your credentials and try again";
+      
+      if (error.message === "Failed to fetch") {
+        errorMsg = "Network connection error. Please check your internet connection and try again.";
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       setErrorMessage(errorMsg);
       
       toast({
@@ -83,9 +89,17 @@ export default function Login() {
         description: "Please check your email for instructions to reset your password",
       });
     } catch (error: any) {
+      let errorMsg = "An error occurred. Please try again.";
+      
+      if (error.message === "Failed to fetch") {
+        errorMsg = "Network connection error. Please check your internet connection and try again.";
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       toast({
         title: "Failed to send reset email",
-        description: error.message || "An error occurred. Please try again.",
+        description: errorMsg,
         variant: "destructive",
       });
     }
