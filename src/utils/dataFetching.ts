@@ -25,11 +25,13 @@ type TableName =
   | "love_notes";
 
 // Define select options type without recursive references
+type OrderOption = { column: string; ascending?: boolean };
+
 type SelectOptions = {
   column?: string;
   value?: string | number;
   select?: string;
-  order?: { column: string; ascending?: boolean };
+  order?: OrderOption;
   limit?: number;
   single?: boolean;
 };
