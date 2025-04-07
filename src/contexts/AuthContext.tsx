@@ -1,15 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { assignTenantToLandlord } from '@/utils/profileUtils';
 import { toast } from '@/components/ui/use-toast';
 
 // Types for our user roles
 export type UserRole = 'tenant' | 'landlord' | 'admin';
 
-// User interface
-export interface User {
+// User interface - renamed to AppUser to avoid conflict with Supabase User
+export interface AppUser {
   id: string;
   email: string;
   name: string;
@@ -21,20 +21,20 @@ export interface User {
 }
 
 type AuthContextType = {
-  currentUser: User | null;
+  currentUser: AppUser | null;
   isLoading: boolean;
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, name: string, password: string, role: UserRole, adminCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updateUserProfile: (userData: Partial<User>) => Promise<void>;
+  updateUserProfile: (userData: Partial<AppUser>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         
         if (session?.user) {
-          const userData: User = {
+          const userData: AppUser = {
             id: session.user.id,
             email: session.user.email || '',
             name: session.user.user_metadata.name || '',
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         
         if (session?.user) {
-          const userData: User = {
+          const userData: AppUser = {
             id: session.user.id,
             email: session.user.email || '',
             name: session.user.user_metadata.name || '',

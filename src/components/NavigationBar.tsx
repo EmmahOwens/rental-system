@@ -37,8 +37,17 @@ export function NavigationBar() {
     try {
       await logout();
       navigate("/");
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out of your account",
+      });
     } catch (error) {
       console.error("Logout error:", error);
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging you out. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -50,7 +59,7 @@ export function NavigationBar() {
   return (
     <header className="w-full p-3 md:p-4">
       <div className="container mx-auto flex justify-between items-center">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
           <House className="h-5 w-5 md:h-6 md:w-6 text-primary" color={iconColor} />
           <h1 className="text-lg md:text-xl font-semibold truncate">
             {isMobile ? "RMS" : "Rental Management System"}

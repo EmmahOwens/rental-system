@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { initializeAuthState } from "@/utils/sessionUtils";
+import { initializeAuthState, setupTokenRefresh } from "@/utils/sessionUtils";
 
 // Pages
 import Index from "./pages/Index";
@@ -33,15 +32,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 30000,
-      onError: (error) => {
-        console.error("Query error:", error);
-      }
-    },
-    mutations: {
-      onError: (error) => {
-        console.error("Mutation error:", error);
-      }
+      staleTime: 30000
     }
   },
 });
@@ -49,7 +40,10 @@ const queryClient = new QueryClient({
 // Initialize auth when the app loads
 const initializeAuth = async () => {
   try {
-    await initializeAuthState();
+    const session = await initializeAuthState();
+    if (session) {
+      setupTokenRefresh();
+    }
   } catch (error) {
     console.error("Failed to initialize auth state:", error);
   }
@@ -71,7 +65,6 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
   
   if (requiredRole && currentUser.role !== requiredRole) {
     console.log(`User role ${currentUser.role} doesn't match required role ${requiredRole}, redirecting`);
-    // If user doesn't have the required role, redirect to the appropriate dashboard
     if (currentUser.role === 'landlord') {
       return <Navigate to="/landlord/dashboard" replace />;
     } else {
@@ -98,7 +91,6 @@ function RoleBasedDashboard() {
   
   console.log("RoleBasedDashboard - Redirecting based on role:", currentUser.role);
   
-  // Explicit redirection based on role
   if (currentUser.role === 'landlord') {
     console.log("RoleBasedDashboard - Redirecting to landlord dashboard");
     return <Navigate to="/landlord/dashboard" replace />;

@@ -2,22 +2,13 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
-import { UserRole } from "@/contexts/AuthContext";
+import { UserRole, AppUser } from "@/contexts/AuthContext";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  currentUser: {
-    id: string;
-    email: string;
-    name: string;
-    role: UserRole;
-    verified: boolean;
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-  } | null;
+  currentUser: AppUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, userData: any) => Promise<void>;
@@ -114,8 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         loading,
-        currentUser, // Add the currentUser property
-        isLoading: loading, // Add isLoading as an alias for loading
+        currentUser,
+        isLoading: loading,
         login,
         signup,
         logout,

@@ -69,3 +69,31 @@ export async function hasValidSession() {
     return false;
   }
 }
+
+/**
+ * Helper function to refresh the auth token periodically
+ * Should be called on application init or when a user logs in
+ */
+export function setupTokenRefresh(intervalMinutes = 55) {
+  // Supabase tokens expire after 60 minutes, so refresh slightly before that
+  const intervalMs = intervalMinutes * 60 * 1000;
+  
+  const intervalId = setInterval(async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error("Token refresh failed:", error);
+      } else if (data.session) {
+        console.log("Token refreshed successfully");
+      } else {
+        console.log("No session to refresh");
+      }
+    } catch (e) {
+      console.error("Error in token refresh:", e);
+    }
+  }, intervalMs);
+  
+  // Return the interval ID so it can be cleared if needed
+  return intervalId;
+}

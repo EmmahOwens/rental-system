@@ -10,11 +10,25 @@ type FetchState<T> = {
   refetch: () => Promise<void>;
 };
 
+// Type-safe table names to ensure we only use tables that exist
+type TableName = 
+  | "profiles" 
+  | "properties" 
+  | "payments" 
+  | "tenancies" 
+  | "rental_applications" 
+  | "maintenance_requests" 
+  | "messages" 
+  | "calendar_events" 
+  | "memory_timeline" 
+  | "memory_details" 
+  | "love_notes";
+
 /**
  * A utility hook for data fetching with automatic error handling and refresh capabilities
  */
 export function useSupabaseFetch<T>(
-  tableName: string,
+  tableName: TableName,
   options?: {
     column?: string;
     value?: string | number;
@@ -83,7 +97,7 @@ export function useSupabaseFetch<T>(
  */
 export async function mutateSupabaseData<T>(
   operation: 'insert' | 'update' | 'delete' | 'upsert',
-  tableName: string,
+  tableName: TableName,
   data?: any,
   options?: {
     column?: string;
