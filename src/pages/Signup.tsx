@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { House, Loader2, LockKeyhole, User } from "lucide-react";
+import { House, Loader2, LockKeyhole, User, ArrowLeft, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -13,6 +14,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [role, setRole] = useState<'tenant' | 'landlord'>('tenant');
   const [adminCode, setAdminCode] = useState("");
   const [showAdminCode, setShowAdminCode] = useState(false);
@@ -28,11 +30,23 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (password !== confirmPassword) {
+      setErrorMessage("Passwords don't match. Please make sure your passwords match.");
       toast({
         title: "Passwords don't match",
         description: "Please make sure your passwords match",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters long.");
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
         variant: "destructive",
       });
       return;
@@ -52,9 +66,15 @@ export default function Signup() {
       // Redirect to login page
       navigate("/login", { replace: true });
     } catch (error: any) {
+      console.error("Signup error:", error);
+      
+      // Handle the error message
+      const errorMsg = error.message || "An error occurred during signup";
+      setErrorMessage(errorMsg);
+      
       toast({
         title: "Signup failed",
-        description: error.message || "An error occurred during signup",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
@@ -62,8 +82,23 @@ export default function Signup() {
     }
   };
 
+  // Go back to home page
+  const handleBackToHome = () => {
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="absolute top-4 left-4">
+        <button 
+          onClick={handleBackToHome}
+          className="flex items-center gap-2 p-2 rounded-full hover:bg-background/50 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="hidden sm:inline">Back to Home</span>
+        </button>
+      </div>
+      
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -78,11 +113,19 @@ export default function Signup() {
         </div>
         
         <NeumorphicCard className="p-8">
+          {errorMessage && (
+            <div className="mb-6 p-3 bg-destructive/10 border border-destructive/30 rounded-md flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            </div>
+          )}
+          
           <div className="flex justify-center mb-6">
             <div className="neumorph p-1 rounded-lg inline-flex">
               <button 
                 className={`px-4 py-2 rounded-lg transition-colors ${role === 'tenant' ? 'neumorph-inset bg-primary/10 text-primary' : ''}`} 
                 onClick={() => handleRoleChange('tenant')}
+                type="button"
               >
                 <User className="h-4 w-4 inline mr-2" />
                 Tenant
@@ -90,6 +133,7 @@ export default function Signup() {
               <button 
                 className={`px-4 py-2 rounded-lg transition-colors ${role === 'landlord' ? 'neumorph-inset bg-primary/10 text-primary' : ''}`}
                 onClick={() => handleRoleChange('landlord')}
+                type="button"
               >
                 <LockKeyhole className="h-4 w-4 inline mr-2" />
                 Landlord
@@ -140,6 +184,7 @@ export default function Signup() {
                 className="neumorph-input w-full"
                 placeholder="••••••••"
                 required
+                minLength={6}
               />
             </div>
             
@@ -175,10 +220,10 @@ export default function Signup() {
               </div>
             )}
             
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="neumorph-button w-full flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 disabled:opacity-70 bg-primary hover:bg-primary/90"
             >
               {isSubmitting ? (
                 <>
@@ -188,18 +233,19 @@ export default function Signup() {
               ) : (
                 `Create ${role === 'tenant' ? 'Tenant' : 'Landlord'} Account`
               )}
-            </button>
+            </Button>
           </form>
           
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
-              <a
-                href="/login"
+              <button
+                onClick={() => navigate("/login")}
+                type="button"
                 className="text-primary font-medium hover:underline"
               >
                 Sign in
-              </a>
+              </button>
             </p>
           </div>
         </NeumorphicCard>

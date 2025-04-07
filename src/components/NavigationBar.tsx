@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/components/ui/use-toast";
 
 export function NavigationBar() {
   const { currentUser, logout } = useAuth();
@@ -35,9 +36,18 @@ export function NavigationBar() {
   const handleLogout = async () => {
     try {
       await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
       navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
+      toast({
+        title: "Logout Error",
+        description: "There was a problem logging you out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

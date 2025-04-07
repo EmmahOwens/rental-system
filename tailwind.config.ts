@@ -63,17 +63,17 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        neupurple: {
-          50: "#f5f3ff",
-          100: "#ede9fe", 
-          200: "#ddd6fe",
-          300: "#c4b5fd",
-          400: "#a78bfa",
-          500: "#8b5cf6",
-          600: "#7c3aed",
-          700: "#6d28d9",
-          800: "#5b21b6",
-          900: "#4c1d95",
+        airbnb: {
+          50: "#FFEEF0",
+          100: "#FFCFD3",
+          200: "#FF9EA7",
+          300: "#FF6D7A",
+          400: "#FF3B4E",
+          500: "#FF385C", // Airbnb primary red
+          600: "#E31C5F",
+          700: "#BD1E59",
+          800: "#841C54",
+          900: "#451A4E",
         },
       },
       borderRadius: {

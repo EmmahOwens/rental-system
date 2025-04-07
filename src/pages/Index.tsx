@@ -71,7 +71,7 @@ export default function Index() {
           </Button>
           <Button
             onClick={() => navigate("/signup")}
-            className="text-sm"
+            className="text-sm bg-primary hover:bg-primary/90"
           >
             Sign Up
           </Button>
@@ -99,7 +99,7 @@ export default function Index() {
               <Button 
                 onClick={() => navigate("/signup")}
                 size="lg"
-                className="font-medium"
+                className="font-medium bg-primary hover:bg-primary/90"
               >
                 Get Started
               </Button>
@@ -141,7 +141,7 @@ export default function Index() {
                 variants={fadeInUpVariants}
                 className="h-full"
               >
-                <div className="bg-card p-6 rounded-lg border border-border h-full shadow-sm">
+                <div className="bg-card p-6 rounded-lg border border-border h-full shadow-sm hover:shadow-md transition-shadow duration-300">
                   <div className="flex flex-col items-center text-center h-full">
                     <div className="p-3 bg-primary/10 rounded-full mb-4">
                       {feature.icon}

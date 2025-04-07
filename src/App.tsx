@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Pages
@@ -26,7 +25,16 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create a new query client with better error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000,
+    },
+  },
+});
 
 // Protected route component
 function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, requiredRole?: 'tenant' | 'landlord' }) {
@@ -54,6 +62,9 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
   
   return children;
 }
+
+// Import useAuth since we use it in ProtectedRoute
+import { useAuth } from '@/contexts/AuthContext';
 
 // RoleBasedDashboard component to handle redirection based on user role
 function RoleBasedDashboard() {

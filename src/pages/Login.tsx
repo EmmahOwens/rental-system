@@ -5,12 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NeumorphicCard } from "@/components/NeumorphicCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { House, Loader2, ArrowLeft } from "lucide-react";
+import { House, Loader2, ArrowLeft, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login, currentUser, isLoading, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -30,6 +32,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       await login(email, password);
@@ -41,9 +44,15 @@ export default function Login() {
       
       // Navigation will be handled by the useEffect above
     } catch (error: any) {
+      console.error("Login error:", error);
+      
+      // Handle specific error cases
+      const errorMsg = error.message || "Please check your credentials and try again";
+      setErrorMessage(errorMsg);
+      
       toast({
         title: "Login failed",
-        description: error.message || "Please check your credentials and try again",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
@@ -84,7 +93,14 @@ export default function Login() {
 
   // Show loading state if auth is loading
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -113,6 +129,13 @@ export default function Login() {
         </div>
         
         <NeumorphicCard className="p-8">
+          {errorMessage && (
+            <div className="mb-6 p-3 bg-destructive/10 border border-destructive/30 rounded-md flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium">
@@ -153,10 +176,10 @@ export default function Login() {
               />
             </div>
             
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="neumorph-button w-full flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 disabled:opacity-70 bg-primary hover:bg-primary/90"
             >
               {isSubmitting ? (
                 <>
@@ -166,7 +189,7 @@ export default function Login() {
               ) : (
                 "Sign in"
               )}
-            </button>
+            </Button>
           </form>
           
           <div className="mt-6 text-center">
