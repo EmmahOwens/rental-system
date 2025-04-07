@@ -24,34 +24,32 @@ type TableName =
   | "memory_details" 
   | "love_notes";
 
-// Define separate primitive types to avoid circular references
-type OrderDirection = boolean;
-type ColumnName = string;
-type SelectColumn = string;
-type LimitNumber = number;
+// Use simple, flat types that won't cause circular references
+type OrderColumn = string;
+type OrderAscending = boolean;
+type FilterColumn = string;
+type FilterValue = string | number;
+type SelectString = string;
+type LimitValue = number;
+type SingleFlag = boolean;
 
-// Define the order option type
-interface OrderOption {
-  column: ColumnName;
-  ascending?: OrderDirection;
-}
-
-// Define select options using the primitive types
-interface SelectOptions {
-  column?: ColumnName;
-  value?: string | number;
-  select?: SelectColumn;
-  order?: OrderOption;
-  limit?: LimitNumber;
-  single?: boolean;
-}
+// Flat structure with no potential for recursion
+type DataFetchOptions = {
+  column?: FilterColumn;
+  value?: FilterValue;
+  select?: SelectString;
+  orderColumn?: OrderColumn;
+  orderAscending?: OrderAscending;
+  limit?: LimitValue;
+  single?: SingleFlag;
+};
 
 /**
  * A utility hook for data fetching with automatic error handling and refresh capabilities
  */
 export function useSupabaseFetch<T>(
   tableName: TableName,
-  options?: SelectOptions
+  options?: DataFetchOptions
 ): FetchState<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -68,9 +66,9 @@ export function useSupabaseFetch<T>(
         query = query.eq(options.column, options.value);
       }
       
-      if (options?.order) {
-        query = query.order(options.order.column, { 
-          ascending: options.order.ascending ?? true 
+      if (options?.orderColumn) {
+        query = query.order(options.orderColumn, { 
+          ascending: options.orderAscending ?? true 
         });
       }
       
