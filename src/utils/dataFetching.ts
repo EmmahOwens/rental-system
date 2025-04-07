@@ -24,17 +24,27 @@ type TableName =
   | "memory_details" 
   | "love_notes";
 
-// Define select options type without recursive references
-type OrderOption = { column: string; ascending?: boolean };
+// Define separate primitive types to avoid circular references
+type OrderDirection = boolean;
+type ColumnName = string;
+type SelectColumn = string;
+type LimitNumber = number;
 
-type SelectOptions = {
-  column?: string;
+// Define the order option type
+interface OrderOption {
+  column: ColumnName;
+  ascending?: OrderDirection;
+}
+
+// Define select options using the primitive types
+interface SelectOptions {
+  column?: ColumnName;
   value?: string | number;
-  select?: string;
+  select?: SelectColumn;
   order?: OrderOption;
-  limit?: number;
+  limit?: LimitNumber;
   single?: boolean;
-};
+}
 
 /**
  * A utility hook for data fetching with automatic error handling and refresh capabilities
