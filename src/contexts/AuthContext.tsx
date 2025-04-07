@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from '@supabase/supabase-js';
@@ -39,7 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event, session);
@@ -65,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
     
-    // Then check existing session
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -157,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name,
             role,
-            verified: true // Set as verified since we're removing verification
+            verified: true
           },
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
@@ -251,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (userData: Partial<User>) => {
+  const updateUserProfile = async (userData: Partial<AppUser>) => {
     if (!currentUser) {
       toast({
         title: "Update failed",

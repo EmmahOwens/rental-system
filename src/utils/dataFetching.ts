@@ -24,19 +24,22 @@ type TableName =
   | "memory_details" 
   | "love_notes";
 
+// Define select options type without recursive references
+type SelectOptions = {
+  column?: string;
+  value?: string | number;
+  select?: string;
+  order?: { column: string; ascending?: boolean };
+  limit?: number;
+  single?: boolean;
+};
+
 /**
  * A utility hook for data fetching with automatic error handling and refresh capabilities
  */
 export function useSupabaseFetch<T>(
   tableName: TableName,
-  options?: {
-    column?: string;
-    value?: string | number;
-    select?: string;
-    order?: { column: string; ascending?: boolean };
-    limit?: number;
-    single?: boolean;
-  }
+  options?: SelectOptions
 ): FetchState<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
