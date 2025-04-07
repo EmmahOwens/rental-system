@@ -36,18 +36,9 @@ export function NavigationBar() {
   const handleLogout = async () => {
     try {
       await logout();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
       navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
-      toast({
-        title: "Logout Error",
-        description: "There was a problem logging you out. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -69,7 +60,7 @@ export function NavigationBar() {
         <div className="flex items-center space-x-2 md:space-x-4">
           <span className="text-xs md:text-sm hidden md:inline">{formattedTime}</span>
           
-          {currentUser && (
+          {currentUser ? (
             <>
               {isMobile ? (
                 <DropdownMenu>
@@ -114,6 +105,13 @@ export function NavigationBar() {
                 </div>
               )}
             </>
+          ) : (
+            <button 
+              onClick={() => navigate('/login')}
+              className="neumorph-button"
+            >
+              Login
+            </button>
           )}
           <ThemeToggle />
         </div>

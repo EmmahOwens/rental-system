@@ -1,11 +1,13 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { initializeAuthState } from "@/utils/sessionUtils";
 
 // Pages
 import Index from "./pages/Index";
@@ -32,9 +34,26 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
       staleTime: 30000,
+      onError: (error) => {
+        console.error("Query error:", error);
+      }
     },
+    mutations: {
+      onError: (error) => {
+        console.error("Mutation error:", error);
+      }
+    }
   },
 });
+
+// Initialize auth when the app loads
+const initializeAuth = async () => {
+  try {
+    await initializeAuthState();
+  } catch (error) {
+    console.error("Failed to initialize auth state:", error);
+  }
+};
 
 // Protected route component
 function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, requiredRole?: 'tenant' | 'landlord' }) {
@@ -62,9 +81,6 @@ function ProtectedRoute({ children, requiredRole }: { children: JSX.Element, req
   
   return children;
 }
-
-// Import useAuth since we use it in ProtectedRoute
-import { useAuth } from '@/contexts/AuthContext';
 
 // RoleBasedDashboard component to handle redirection based on user role
 function RoleBasedDashboard() {
@@ -95,7 +111,10 @@ function RoleBasedDashboard() {
   }
 }
 
-// Keep only one App component definition
+// Initialize auth on app load
+initializeAuth();
+
+// App component
 const App = () => (
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

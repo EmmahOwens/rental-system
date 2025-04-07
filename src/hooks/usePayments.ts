@@ -1,9 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { PaymentMethod, PaymentHistory } from "@/components/Payments/types";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserPayments, createPayment, getPaymentStats } from "@/utils/paymentUtils";
+import { mutateSupabaseData } from "@/utils/dataFetching";
+import { getUserPayments, getPaymentStats } from "@/utils/paymentUtils";
+import { formatUGX } from "@/utils/formatters";
 
 export function usePayments() {
   const { toast } = useToast();
@@ -40,43 +42,45 @@ export function usePayments() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch payment history from API
-  useEffect(() => {
+  const fetchPayments = async () => {
     if (!userId) return;
     
-    const fetchPayments = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const payments = await getUserPayments(userId, userRole as 'tenant' | 'landlord');
-        
-        // Transform the API payment data to match our PaymentHistory interface
-        const formattedPayments: PaymentHistory[] = payments.map(payment => ({
-          id: payment.id,
-          date: payment.created_at,
-          amount: Number(payment.amount),
-          status: payment.status === 'confirmed' ? 'paid' : 
-                 payment.status === 'pending' ? 'pending' : 'failed',
-          property: "Sunset Apartments, #304", // This would ideally come from a property lookup
-          description: payment.description || `Rent Payment (${payment.payment_method})`
-        }));
-        
-        setPaymentHistory(formattedPayments);
-      } catch (err) {
-        console.error("Error fetching payments:", err);
-        setError("Failed to load payment history");
-        toast({
-          title: "Error",
-          description: "Failed to load payment history",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    setError(null);
+    try {
+      const payments = await getUserPayments(userId, userRole as 'tenant' | 'landlord');
+      
+      // Transform the API payment data to match our PaymentHistory interface
+      const formattedPayments: PaymentHistory[] = payments.map(payment => ({
+        id: payment.id,
+        date: payment.created_at,
+        amount: Number(payment.amount),
+        status: payment.status === 'confirmed' ? 'paid' : 
+               payment.status === 'pending' ? 'pending' : 'failed',
+        property: "Sunset Apartments, #304", // This would ideally come from a property lookup
+        description: payment.description || `Rent Payment (${payment.payment_method})`
+      }));
+      
+      setPaymentHistory(formattedPayments);
+    } catch (err) {
+      console.error("Error fetching payments:", err);
+      setError("Failed to load payment history");
+      toast({
+        title: "Error",
+        description: "Failed to load payment history. Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchPayments();
-  }, [userId, userRole, toast]);
+  // Fetch payment history from API
+  useEffect(() => {
+    if (currentUser) {
+      fetchPayments();
+    }
+  }, [userId, userRole]);
 
   const handlePaymentSuccess = async (amount: number = 1200000) => {
     if (!userId) {
@@ -100,34 +104,38 @@ export function usePayments() {
         return;
       }
       
-      // Create payment via API
-      const landlordId = "mock-landlord-id"; // In a real app, this would come from the property data
-      const payment = await createPayment(
-        userId, 
-        landlordId,
-        amount,
-        defaultMethod.type,
-        "Monthly Rent Payment"
-      );
+      // In a real app, this would be a call to a payments API
+      // For demo purposes, we'll just add a new payment history item
+      const newPayment: PaymentHistory = {
+        id: `pmt-${Date.now()}`,
+        date: new Date().toISOString(),
+        amount: amount,
+        status: 'pending',
+        property: "Sunset Apartments, #304",
+        description: "Monthly Rent Payment"
+      };
       
-      if (payment) {
-        // Add the new payment to history
-        const newPayment: PaymentHistory = {
-          id: payment.id,
-          date: payment.created_at,
-          amount: Number(payment.amount),
-          status: payment.status === 'confirmed' ? 'paid' : 'pending',
-          property: "Sunset Apartments, #304",
-          description: "Monthly Rent Payment"
-        };
-        
-        setPaymentHistory(prev => [newPayment, ...prev]);
+      // Add to payment history
+      setPaymentHistory(prev => [newPayment, ...prev]);
+      
+      // Show success notification
+      toast({
+        title: "Payment initiated",
+        description: `${formatUGX(amount)} payment is being processed.`,
+      });
+      
+      // Simulate payment confirmation after 3 seconds
+      setTimeout(() => {
+        setPaymentHistory(prev => 
+          prev.map(p => p.id === newPayment.id ? {...p, status: 'paid'} : p)
+        );
         
         toast({
           title: "Payment successful",
-          description: "Your payment has been processed successfully."
+          description: `${formatUGX(amount)} has been paid successfully.`,
         });
-      }
+      }, 3000);
+      
     } catch (err) {
       console.error("Payment error:", err);
       toast({
@@ -138,6 +146,10 @@ export function usePayments() {
     }
   };
 
+  const refreshPayments = () => {
+    fetchPayments();
+  };
+
   return {
     paymentMethods,
     setPaymentMethods,
@@ -145,6 +157,7 @@ export function usePayments() {
     setPaymentHistory,
     handlePaymentSuccess,
     loading,
-    error
+    error,
+    refreshPayments
   };
 }
