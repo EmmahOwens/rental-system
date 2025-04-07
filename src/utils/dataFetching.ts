@@ -24,24 +24,15 @@ type TableName =
   | "memory_details" 
   | "love_notes";
 
-// Use simple, flat types that won't cause circular references
-type OrderColumn = string;
-type OrderAscending = boolean;
-type FilterColumn = string;
-type FilterValue = string | number;
-type SelectString = string;
-type LimitValue = number;
-type SingleFlag = boolean;
-
-// Flat structure with no potential for recursion
+// Simple flat options type to avoid circular references
 type DataFetchOptions = {
-  column?: FilterColumn;
-  value?: FilterValue;
-  select?: SelectString;
-  orderColumn?: OrderColumn;
-  orderAscending?: OrderAscending;
-  limit?: LimitValue;
-  single?: SingleFlag;
+  column?: string;
+  value?: string | number;
+  select?: string;
+  orderColumn?: string;
+  orderAscending?: boolean;
+  limit?: number;
+  single?: boolean;
 };
 
 /**

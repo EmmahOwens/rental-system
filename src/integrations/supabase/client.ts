@@ -21,7 +21,7 @@ export const supabase = createClient<Database>(
       storage: localStorage
     },
     global: {
-      fetch: (...args) => {
+      fetch: function customFetch(...args) {
         return fetch(...args).catch(err => {
           console.error('Supabase fetch error:', err);
           throw err;
