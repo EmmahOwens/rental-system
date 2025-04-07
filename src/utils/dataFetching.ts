@@ -24,7 +24,7 @@ type TableName =
   | "memory_details" 
   | "love_notes";
 
-// Simple flat options type to avoid circular references
+// Simplified options type to avoid deep type instantiation
 type DataFetchOptions = {
   column?: string;
   value?: string | number;
